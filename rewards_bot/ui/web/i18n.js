@@ -245,6 +245,26 @@ const I18N = (() => {
     "GitHub tạm giới hạn số lần hỏi, thử lại sau": "GitHub is rate limiting requests, try again later",
     "Bot chưa dừng hẳn, thử lại sau vài giây.": "The bot has not fully stopped yet, try again in a few seconds.",
     "File cập nhật không khớp mã SHA-256, đã xóa (tải lại sau)": "The update file did not match its SHA-256 and was deleted (try again later)",
+    // ---- thông báo Telegram / Discord
+    "Thông báo": "Notifications", "Đã lưu": "Saved",
+    "Chạy xong thì gửi tóm tắt (điểm được, tài khoản lỗi) qua Telegram hoặc Discord. Token được Windows mã hóa, không ghi ra nhật ký.":
+      "After a run, send a summary (points gained, failed accounts) to Telegram or Discord. Tokens are encrypted by Windows and never written to the log.",
+    "Khi nào gửi": "When to send", "Không gửi": "Never", "Mỗi lượt chạy": "After every run", "Chỉ khi có lỗi": "Only when something failed",
+    "Token bot Telegram": "Telegram bot token", "Chat ID Telegram": "Telegram chat ID", "Webhook Discord": "Discord webhook",
+    "Xóa token Telegram": "Remove Telegram token", "Xóa webhook Discord": "Remove Discord webhook",
+    "Chỉ lưu được token trên Windows.": "Tokens can only be saved on Windows.",
+    "Lưu thông báo": "Save notifications", "Gửi thử": "Send test", "Đang gửi…": "Sending…",
+    "Đã lưu cài đặt thông báo": "Notification settings saved",
+    "Chưa có kênh nào để gửi: nhập token Telegram kèm Chat ID, hoặc webhook Discord.":
+      "Nowhere to send yet: enter a Telegram token with a chat ID, or a Discord webhook.",
+    "Chưa có kênh nào: lưu token Telegram kèm Chat ID, hoặc webhook Discord.":
+      "No channel yet: save a Telegram token with a chat ID, or a Discord webhook.",
+    "Telegram: đã gửi": "Telegram: sent", "Discord: đã gửi": "Discord: sent",
+    "Chỉ lưu được token trên Windows (mã hóa DPAPI).": "Tokens can only be saved on Windows (DPAPI encryption).",
+    "Token bot Telegram không đúng dạng, sao chép lại từ @BotFather": "The Telegram bot token is not valid, copy it again from @BotFather",
+    "Chat ID Telegram phải là một số hoặc @tên_kênh": "The Telegram chat ID must be a number or @channel_name",
+    "Webhook Discord không đúng dạng, sao chép lại trong Discord (Cài đặt kênh > Tích hợp > Webhook)":
+      "The Discord webhook is not valid, copy it again in Discord (Channel settings > Integrations > Webhooks)",
   };
   // chuỗi có dữ liệu của người dùng (tên tài khoản, email...) ở giữa: dịch theo mẫu, phần ở giữa giữ nguyên hoặc dịch tiếp
   const PATTERNS = [
@@ -258,6 +278,7 @@ const I18N = (() => {
     [/^Không kết nối được GitHub \((.+)\)$/, (m) => `Could not reach GitHub (${m[1]})`],
     [/^GitHub trả lỗi (\d+)$/, (m) => `GitHub returned error ${m[1]}`],
     [/^Đăng nhập cho tài khoản (.+)$/, (m) => `Signing in account ${m[1]}`],
+    [/^(Telegram|Discord): lỗi \((.+)\)$/, (m) => `${m[1]}: failed (${m[2]})`],
   ];
   const NUM = /[+\-]?\d[\d,.:/-]*/g;  // vd "3,083", "+10", "60/90", "14:16", "09-11"
 

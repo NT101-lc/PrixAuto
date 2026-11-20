@@ -19,7 +19,7 @@ LOG_DIR = DATA_DIR / "logs"  # nhật ký mỗi ngày 1 file
 LOCK_FILE = DATA_DIR / "app.lock"  # chỉ cho 1 cửa sổ app chạy cùng lúc
 VISUAL_TRIES_FILE = DATA_DIR / "visual_tries.json"  # số lần thử Visual Search mỗi tài khoản trong ngày
 CREDENTIALS_FILE = DATA_DIR / "credentials.json"  # email + mật khẩu đã mã hóa (DPAPI) để tự đăng nhập lại
-SECRETS_FILE = DATA_DIR / "secrets.json"  # bí mật khác (đã mã hóa DPAPI); hiện chưa dùng
+SECRETS_FILE = DATA_DIR / "secrets.json"  # bí mật khác (mã hóa DPAPI): token bot Telegram, webhook Discord
 AVATAR_DIR = DATA_DIR / "avatars"  # ảnh đại diện tài khoản: <thư mục profile>.webp|png|jpg
 UPDATE_DIR = DATA_DIR / "update"  # bản cập nhật tải về + script cài (chỉ bản .exe)
 
@@ -56,6 +56,10 @@ DEFAULT_SETTINGS = {
     "browse_minutes": 30,
     "browse_auto_stop": True,  # Browse tự dừng khi Edge – Minutes không tăng sau 20 phút
     "check_updates": True,  # mở app (và mỗi 6 giờ) thì hỏi GitHub có tag phiên bản mới không
+    # gửi tóm tắt mỗi lượt chạy qua Telegram / Discord: "off" / "always" / "errors" (chỉ khi có tài khoản lỗi).
+    # Token bot Telegram và webhook Discord nằm trong secrets.json (mã hóa DPAPI), không nằm ở đây.
+    "notify_mode": "off",
+    "telegram_chat_id": "",
     "onboarded": False,  # đã xem màn hình chào lần đầu (chọn ngôn ngữ, đồng ý rủi ro, thêm tài khoản)
     # phiên bản app lúc người dùng đồng ý phần rủi ro; rỗng = chưa đồng ý, nút Chạy trong giao diện mở lại bước đồng ý.
     # Chỉ chặn giao diện: lệnh --run-all của Task Scheduler không bị ảnh hưởng.

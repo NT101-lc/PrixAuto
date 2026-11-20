@@ -1051,6 +1051,7 @@ def test_runner_shuffles_accounts_for_runs_only(monkeypatch):
     monkeypatch.setattr(runner_mod.FileLog, "prune", staticmethod(lambda d: None))
     r = runner_mod.Runner.__new__(runner_mod.Runner)
     r.running, r.threads, r.sem, r.lock = {}, {}, None, threading.Lock()
+    r._batch, r._notify_settings = {}, {}
     order = []
     r._worker = lambda prof, settings, ev, action: order.append(prof["name"])
     monkeypatch.setattr(runner_mod.random, "sample", lambda seq, k: list(reversed(seq)))

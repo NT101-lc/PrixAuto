@@ -456,6 +456,7 @@ function bindStatic() {
   $("#log-filter").onchange = renderLog;
   $("#btn-save-settings").onclick = saveSettingsForm;
   bindSettingsDialog();
+  Notify.bind();
   $("#max-parallel").onchange = (e) => saveSettings({ max_parallel: Math.max(1, +e.target.value || 1) });
   bindProfileDialog();
   bindGoalDialog();
@@ -1426,6 +1427,7 @@ function renderSettings() {
   $$("#theme-choice input").forEach((i) => (i.checked = i.value === (th === "cyberpunk" && !isFun() ? "dark" : th)));
   $("#set-fun-mode").checked = isFun();
   $("#set-check-updates").checked = S.settings.check_updates !== false;
+  Notify.render();
   $$("#lang-choice input").forEach((i) => (i.checked = i.value === (S.settings.language === "en" ? "en" : "vi")));
   const app = S.app || {};
   $("#app-version").textContent = `Phiên bản ${app.version || "?"}${app.frozen ? "" : " (mã nguồn)"}`;
@@ -1447,6 +1449,54 @@ async function saveSettingsForm() {
   if (ok) toast("Đã lưu cài đặt");
   return ok;
 }
+// Thông báo Telegram / Discord. Giao diện chỉ biết kênh nào đã lưu (S.notify), không bao giờ nhận lại token / webhook;
+// ô token để trống khi lưu = giữ nguyên token cũ.
+const Notify = {
+  render() {
+    const n = S.notify || {};
+    $("#nt-mode").value = S.settings.notify_mode || "off";
+    $("#nt-tg-chat").value = S.settings.telegram_chat_id || "";
+    $("#nt-tg-token").value = ""; $("#nt-dc").value = "";
+    $("#nt-tg-saved").hidden = $("#nt-tg-clear").hidden = !n.telegram;
+    $("#nt-dc-saved").hidden = $("#nt-dc-clear").hidden = !n.discord;
+    $("#nt-unsupported").hidden = n.supported !== false;
+    for (const id of ["#nt-tg-token", "#nt-dc", "#nt-save", "#nt-test"]) $(id).disabled = n.supported === false;
+  },
+  async save(clear = []) {
+    const chat = $("#nt-tg-chat").value.trim();
+    if (chat && !/^(-?\d{1,20}|@[A-Za-z0-9_]{5,32})$/.test(chat)) {  // cùng quy tắc với SETTING_SCHEMA của webapp.py
+      showError("Chat ID Telegram phải là một số hoặc @tên_kênh"); $("#nt-tg-chat").focus(); return false;
+    }
+    const ok = await saveSettings({ notify_mode: $("#nt-mode").value, telegram_chat_id: chat });
+    if (!ok) { this.render(); return false; }
+    const r = await api().save_notify_channels({ telegram_token: $("#nt-tg-token").value.trim(),
+      discord_webhook: $("#nt-dc").value.trim(), clear });
+    if (r.notify) S.notify = r.notify;
+    if (!r.ok) { showError(r.error); return false; }
+    this.render();
+    if (S.settings.notify_mode !== "off" && !S.notify.discord && !(S.notify.telegram && S.settings.telegram_chat_id))
+      $("#nt-result").textContent = "Chưa có kênh nào để gửi: nhập token Telegram kèm Chat ID, hoặc webhook Discord.";
+    else $("#nt-result").textContent = "";
+    toast("Đã lưu cài đặt thông báo");
+    return true;
+  },
+  async test() {
+    const out = $("#nt-result");
+    if (!(await this.save())) return;
+    out.textContent = "Đang gửi…";
+    const r = await api().test_notify();
+    if (!r.results) { out.textContent = r.error || "Có lỗi xảy ra"; return; }
+    const label = { telegram: "Telegram", discord: "Discord" };
+    out.textContent = Object.entries(r.results).map(([k, e]) => e ? `${label[k]}: lỗi (${e})` : `${label[k]}: đã gửi`).join(" · ");
+  },
+  bind() {
+    $("#nt-save").onclick = () => this.save();
+    $("#nt-test").onclick = () => this.test();
+    $("#nt-tg-clear").onclick = () => this.save(["telegram"]);
+    $("#nt-dc-clear").onclick = () => this.save(["discord"]);
+  },
+};
+
 // Cài đặt ngay trên trang Văn phòng: mượn nguyên khối cài đặt (#settings-cards) đặt vào hộp thoại, đóng thì trả về trang Cài đặt.
 // Không nhân đôi form nên mọi id / sự kiện (giao diện, ngôn ngữ, cập nhật) vẫn là một.
 function openSettingsDialog() {

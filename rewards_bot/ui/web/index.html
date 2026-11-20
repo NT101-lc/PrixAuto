@@ -345,6 +345,38 @@
                 <button type="button" class="btn btn-link px-0 mt-2" id="btn-welcome-again"><i class="ti ti-hand-stop"></i>Xem lại màn hình chào</button>
               </div>
             </div>
+            <div class="card" id="notify-card">
+              <div class="card-header"><h3 class="card-title"><i class="ti ti-bell me-2"></i>Thông báo</h3></div>
+              <div class="card-body d-flex flex-column gap-3">
+                <div class="text-secondary small">Chạy xong thì gửi tóm tắt (điểm được, tài khoản lỗi) qua Telegram hoặc Discord. Token được Windows mã hóa, không ghi ra nhật ký.</div>
+                <div>
+                  <label class="form-label" for="nt-mode">Khi nào gửi</label>
+                  <select class="form-select" id="nt-mode">
+                    <option value="off">Không gửi</option>
+                    <option value="always">Mỗi lượt chạy</option>
+                    <option value="errors">Chỉ khi có lỗi</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="form-label" for="nt-tg-token">Token bot Telegram <span class="badge bg-green-lt ms-1" id="nt-tg-saved" hidden>Đã lưu</span></label>
+                  <input type="password" class="form-control" id="nt-tg-token" autocomplete="off" spellcheck="false" placeholder="123456789:AAE…" data-no-i18n>
+                  <label class="form-label mt-2" for="nt-tg-chat">Chat ID Telegram</label>
+                  <input type="text" class="form-control" id="nt-tg-chat" autocomplete="off" spellcheck="false" placeholder="123456789" data-no-i18n>
+                  <button type="button" class="btn btn-link px-0" id="nt-tg-clear" hidden><i class="ti ti-trash"></i>Xóa token Telegram</button>
+                </div>
+                <div>
+                  <label class="form-label" for="nt-dc">Webhook Discord <span class="badge bg-green-lt ms-1" id="nt-dc-saved" hidden>Đã lưu</span></label>
+                  <input type="password" class="form-control" id="nt-dc" autocomplete="off" spellcheck="false" placeholder="https://discord.com/api/webhooks/...">
+                  <button type="button" class="btn btn-link px-0" id="nt-dc-clear" hidden><i class="ti ti-trash"></i>Xóa webhook Discord</button>
+                </div>
+                <div class="text-secondary small" id="nt-unsupported" hidden>Chỉ lưu được token trên Windows.</div>
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                  <button class="btn btn-primary" type="button" id="nt-save"><i class="ti ti-device-floppy"></i>Lưu thông báo</button>
+                  <button class="btn" type="button" id="nt-test"><i class="ti ti-send"></i>Gửi thử</button>
+                </div>
+                <div class="text-secondary small min-w-0" id="nt-result"></div>
+              </div>
+            </div>
             <div class="card" id="about-card">
               <div class="card-header"><h3 class="card-title">Giới thiệu</h3><div class="card-actions text-secondary" id="app-version"></div></div>
               <div class="card-body d-flex flex-column gap-3">

@@ -18,7 +18,7 @@ from pathlib import Path
 import webview
 
 from .. import APP_NAME, __version__
-from ..core import credentials, security, updater
+from ..core import credentials, notify, security, updater
 from ..core import config
 from ..core.config import (DATA_DIR, DASHBOARD_FILE, HISTORY_FILE, POINTS_HISTORY_FILE, load_settings, new_profile_dir,
                            read_json, save_settings, write_json)
@@ -43,6 +43,8 @@ SETTING_SCHEMA = {
     "theme": (str, ("system", "light", "dark", "cyberpunk")),
     "language": (str, ("vi", "en")),
     "onboarded": (bool,), "check_updates": (bool,),
+    "notify_mode": (str, notify.MODES),
+    "telegram_chat_id": (str, re.compile(r"(-?\d{1,20}|@[A-Za-z0-9_]{5,32})?")),
     "risk_ack": (str, re.compile(r"(\d{1,4}\.\d{1,4}\.\d{1,4})?")),  # số phiên bản lúc đồng ý, hoặc rỗng
 }
 SETTING_KEYS = tuple(SETTING_SCHEMA)
@@ -174,6 +176,7 @@ class Api:
                 "history": self._history,
                 "running": list(self._runner.running),
                 "credentials": self._cred_info(),
+                "notify": self._notify_info(),
                 "goals": self._settings.get("goals", {}),
                 "avatars": self._avatars(),
                 "app": self._app_info(),
@@ -343,6 +346,42 @@ class Api:
         if isinstance(name, str):
             credentials.remove(name)
         return {"ok": True, "credentials": self._cred_info()}
+
+    # ------------------------------------------------------------ thông báo Telegram / Discord
+    @staticmethod
+    def _notify_info() -> dict:
+        """Chỉ cho giao diện biết kênh nào đã lưu, không bao giờ gửi lại token / webhook."""
+        return {"supported": credentials.supported(), "telegram": credentials.has_secret(notify.TG_KEY),
+                "discord": credentials.has_secret(notify.DC_KEY)}
+
+    def save_notify_channels(self, data) -> dict:
+        """data: {"telegram_token", "discord_webhook": chuỗi mới (rỗng = giữ nguyên), "clear": ["telegram"|"discord"]}."""
+        if not isinstance(data, dict):
+            return {"ok": False, "error": "Dữ liệu không hợp lệ."}
+        if not credentials.supported():
+            return {"ok": False, "error": "Chỉ lưu được token trên Windows (mã hóa DPAPI)."}
+        clear = data.get("clear") or []
+        try:
+            tg = notify.clean_telegram_token(data["telegram_token"]) if data.get("telegram_token") else ""
+            dc = notify.clean_discord_webhook(data["discord_webhook"]) if data.get("discord_webhook") else ""
+            for key, ch in ((notify.TG_KEY, "telegram"), (notify.DC_KEY, "discord")):
+                if isinstance(clear, list) and ch in clear:
+                    credentials.remove_secret(key)
+            if tg:
+                credentials.set_secret(notify.TG_KEY, tg)
+            if dc:
+                credentials.set_secret(notify.DC_KEY, dc)
+        except (ValueError, OSError) as e:
+            return {"ok": False, "error": str(e), "notify": self._notify_info()}
+        return {"ok": True, "notify": self._notify_info()}
+
+    def test_notify(self) -> dict:
+        """Gửi tin thử tới các kênh đã lưu. Trả {"ok", "results": {kênh: "" | lý do lỗi}}."""
+        chans = notify.channels(self._settings.get("telegram_chat_id", ""))
+        if not chans:
+            return {"ok": False, "error": "Chưa có kênh nào: lưu token Telegram kèm Chat ID, hoặc webhook Discord."}
+        results = notify.send(notify.test_text(self._settings.get("language", "vi")), chans)
+        return {"ok": not any(results.values()), "results": results}
 
     def save_profile(self, old_name, profile: dict) -> dict:
         if not isinstance(profile, dict):

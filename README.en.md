@@ -75,7 +75,7 @@
 | **Searches** | PC and Mobile searches until the points are full. Queries come from 22 topics (~2,600 real-looking sentences plus ~10,000 popular keywords), never repeated across accounts or within N days. Typed letter by letter with random pauses. |
 | **Extras** | Visual Search, Read to Earn (10 articles, 30 points), phone app check-in (keeps the Bing App Streak), Browse (Edge – Minutes). Each one can be switched on or off. |
 | **Several accounts** | Run in parallel, each in its own Edge profile and window, with an optional per-account proxy. *Run every task once* also does the tasks that are switched off. |
-| **Tracking** | Per-account overview, a per-day history of what was earned and what is still missing, and a live log with error / warning filters and search. |
+| **Tracking** | Per-account overview, a per-day history of what was earned and what is still missing, and a live log with error / warning filters and search. After a run, a summary goes to Telegram or Discord (every run, or only when something failed). |
 | **Self-check** | No searches: verifies sign-in, the bing.com account, the Points breakdown, the Edge profile and the proxy, with a fix for every problem. |
 | **Auto sign-in** | Optional. The password is encrypted with Windows DPAPI. The bot stops at any verification step (code, Authenticator, CAPTCHA) instead of trying to pass it. |
 | **Scheduling** | `--run-all --headless` and `--checkin` run without a window, for Windows Task Scheduler or cron. |
@@ -231,6 +231,20 @@ Upgrading from the old **RewardsBot** name: copy the `data\` folder from next to
 `PrixAuto.exe`, and point your scheduled task at `PrixAuto.exe`.
 
 ## FAQ
+
+<details>
+<summary><b>Get notifications on Telegram or Discord</b></summary>
+
+Open **Settings → Notifications**, pick *After every run* or *Only when something failed*, then fill in either channel:
+
+- **Telegram**: send `/newbot` to [@BotFather](https://t.me/BotFather) to get a bot token. Send any message to your bot,
+  then open `https://api.telegram.org/bot<token>/getUpdates` and copy the `chat.id` number: that is the chat ID.
+- **Discord**: in the channel that should receive messages, open *Edit Channel → Integrations → Webhooks → New Webhook
+  → Copy Webhook URL*.
+
+Click **Send test** to check it. The token and webhook are encrypted by Windows (DPAPI) in `data\secrets.json` and never
+written to the log. Notifications are also sent for scheduled runs (`--run-all`, `--checkin`).
+</details>
 
 <details>
 <summary><b>The app window is blank or closes right away</b></summary>

@@ -75,7 +75,7 @@
 | **Search** | Search PC và Mobile đến khi đủ điểm. Câu search lấy từ 22 lĩnh vực (khoảng 2.600 câu dài có nghĩa và 10.000 từ khóa phổ biến), không trùng giữa các tài khoản và không lặp lại trong N ngày. Gõ từng chữ vào ô tìm kiếm, nghỉ ngẫu nhiên giữa các lượt. |
 | **Việc thêm** | Visual Search, Read to Earn (10 bài báo, 30 điểm), check-in app điện thoại (giữ chuỗi Bing App Streak), Browse (Edge – Minutes). Bật tắt riêng từng việc. |
 | **Nhiều tài khoản** | Chạy song song, mỗi tài khoản một profile Edge và cửa sổ riêng, proxy riêng nếu cần. Nút *Chạy mọi việc một lần* làm cả những việc đang tắt. |
-| **Theo dõi** | Tổng quan theo từng tài khoản, lịch sử từng ngày (được bao nhiêu điểm, còn thiếu việc gì), nhật ký có lọc lỗi / cảnh báo và tìm kiếm. |
+| **Theo dõi** | Tổng quan theo từng tài khoản, lịch sử từng ngày (được bao nhiêu điểm, còn thiếu việc gì), nhật ký có lọc lỗi / cảnh báo và tìm kiếm. Chạy xong gửi tóm tắt qua Telegram hoặc Discord (mỗi lượt, hoặc chỉ khi có lỗi). |
 | **Kiểm tra** | Không search: kiểm tra đăng nhập, tài khoản trên bing.com, Points breakdown, profile Edge và proxy; mỗi lỗi kèm cách sửa. |
 | **Tự đăng nhập lại** | Không bắt buộc. Mật khẩu mã hóa bằng Windows DPAPI. Gặp bước xác minh (mã, Authenticator, CAPTCHA) thì bot dừng, không cố vượt. |
 | **Chạy theo lịch** | `--run-all --headless` và `--checkin` để đặt lịch bằng Windows Task Scheduler hoặc cron, không mở cửa sổ. |
@@ -216,6 +216,19 @@ Từ bản cũ tên **RewardsBot**: chép thư mục `data\` cạnh `RewardsBot.
 Task Scheduler sang `PrixAuto.exe`.
 
 ## Câu hỏi thường gặp
+
+<details>
+<summary><b>Nhận thông báo qua Telegram hoặc Discord</b></summary>
+
+Vào **Cài đặt → Thông báo**, chọn *Mỗi lượt chạy* hoặc *Chỉ khi có lỗi*, rồi nhập một trong hai kênh:
+
+- **Telegram**: nhắn `/newbot` cho [@BotFather](https://t.me/BotFather) để lấy token bot. Nhắn một tin bất kỳ cho bot
+  của bạn, rồi mở `https://api.telegram.org/bot<token>/getUpdates` để xem số `chat.id`; đó là Chat ID.
+- **Discord**: trong kênh muốn nhận tin, vào *Chỉnh sửa kênh → Tích hợp → Webhook → Webhook mới → Sao chép URL*.
+
+Bấm **Gửi thử** để kiểm tra. Token và webhook được Windows mã hóa (DPAPI) trong `data\secrets.json`, không ghi ra
+nhật ký. Thông báo được gửi cả khi chạy theo lịch (`--run-all`, `--checkin`).
+</details>
 
 <details>
 <summary><b>Mở app lên trắng trơn hoặc tắt ngay</b></summary>

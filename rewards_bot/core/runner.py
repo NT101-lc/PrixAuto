@@ -5,6 +5,7 @@ import threading
 import time
 from datetime import date, timedelta
 
+from . import notify
 from .bot import RewardsBot
 from .config import LOG_DIR
 from ..search.bank import QueryBank
@@ -52,16 +53,27 @@ class Runner:
             self._file_log.write(name, msg)
             log(name, msg)
 
-        self.log, self.status, self.done = log_both, status, done
+        def status_both(name, data):
+            with self.lock:
+                if name in self._batch:  # nhớ trạng thái cuối của tài khoản cho tin tóm tắt
+                    self._batch[name].update({k: data[k] for k in notify.KEPT if k in data})
+            status(name, data)
+
+        self.log, self.status, self.done = log_both, status_both, done
         self.running: dict = {}  # name -> stop Event
         self.threads: dict = {}  # name -> Thread
         self.sem = None
         self.lock = threading.Lock()
+        # lượt chạy đang gom để báo Telegram / Discord: {tên: trạng thái cuối}; gửi khi tài khoản cuối cùng chạy xong
+        self._batch: dict = {}
+        self._notify_settings: dict = {}
+        self.send = notify.send  # thay được trong test
 
     def is_running(self, name: str) -> bool:
         return name in self.running
 
     SHUFFLE_ACTIONS = {"run", "checkin"}
+    NOTIFY_ACTIONS = {"run", "checkin"}  # các lệnh gửi tin tóm tắt qua Telegram / Discord khi xong
 
     def start(self, profiles: list, settings: dict, action: str = "run") -> None:
         """action: "run" (làm task), "login" (mở cửa sổ đăng nhập), "refresh" (chỉ đọc điểm),
@@ -75,6 +87,9 @@ class Runner:
             for prof in profiles:
                 if prof["name"] in self.running:
                     continue
+                if action in self.NOTIFY_ACTIONS:
+                    self._batch[prof["name"]] = {}
+                    self._notify_settings = settings
                 ev = threading.Event()
                 self.running[prof["name"]] = ev
                 t = threading.Thread(target=self._worker, args=(dict(prof), dict(settings), ev, action), daemon=True)
@@ -117,7 +132,23 @@ class Runner:
             with self.lock:
                 self.running.pop(name, None)
                 self.threads.pop(name, None)
+                batch = None
+                if self._batch and not any(n in self.running for n in self._batch):
+                    batch, self._batch = self._batch, {}
+            if batch:
+                self._notify(batch)  # trước done(): lệnh --run-all đợi gửi xong rồi mới thoát
             self.done(name)
+
+    def _notify(self, batch: dict) -> None:
+        s = self._notify_settings
+        try:
+            text = notify.summary(batch, s.get("notify_mode", "off"), s.get("language", "vi"))
+            chans = notify.channels(s.get("telegram_chat_id", "")) if text else {}
+            for ch, err in (self.send(text, chans) if chans else {}).items():
+                label = {"telegram": "Telegram", "discord": "Discord"}[ch]
+                self.log("app", f"Đã gửi thông báo qua {label}" if not err else f"cảnh báo: không gửi được thông báo qua {label}: {err}")
+        except Exception as e:  # noqa: BLE001 (thông báo không được làm hỏng lượt chạy)
+            self.log("app", f"cảnh báo: không gửi được thông báo ({type(e).__name__})")
 
     def stop(self, names=None) -> None:
         with self.lock:

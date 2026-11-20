@@ -117,7 +117,32 @@ def load(name: str, path=None):
 
 
 # ---------------------------------------------------------------- bí mật khác, file riêng
-# Chỉ còn dùng để xóa token GitHub cũ (bản có tự cập nhật đã lưu nó vào đây).
+# Token bot Telegram và webhook Discord để gửi thông báo (core/notify.py), mã hóa DPAPI như mật khẩu.
+def set_secret(key: str, value: str, path=None) -> None:
+    path = path or config.SECRETS_FILE
+    token = protect(value)
+    with _LOCK:
+        data = read_json(path, {})
+        data[key] = token
+        write_json(path, data)
+        path.with_suffix(path.suffix + ".bak").unlink(missing_ok=True)
+
+
+def get_secret(key: str, path=None):
+    """Giá trị đã giải mã, hoặc None nếu chưa lưu / không giải mã được."""
+    token = read_json(path or config.SECRETS_FILE, {}).get(key)
+    if not isinstance(token, str) or not supported():
+        return None
+    try:
+        return unprotect(token)
+    except (ValueError, OSError):
+        return None
+
+
+def has_secret(key: str, path=None) -> bool:
+    return isinstance(read_json(path or config.SECRETS_FILE, {}).get(key), str)
+
+
 def remove_secret(key: str, path=None) -> None:
     path = path or config.SECRETS_FILE
     with _LOCK:
