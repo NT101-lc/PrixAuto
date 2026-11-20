@@ -427,7 +427,14 @@ async function setLanguage(lang) {
 }
 
 function bindStatic() {
-  $$(".lang-switch button").forEach((b) => (b.onclick = () => setLanguage(sideCycle(b, "setLang"))));
+  $$(".lang-switch button").forEach((b) => (b.onclick = () => setLanguage(b.dataset.setLang)));  // nằm ở thanh trên cùng, luôn hiện đủ 2 nút
+  // ô tìm kiếm ở thanh trên cùng: gõ là sang trang Tài khoản và lọc theo tên; Ctrl+K để nhảy vào ô, Esc để xóa
+  const ts = $("#top-search");
+  ts.oninput = () => { if (S.page !== "profiles") go("profiles"); else renderProfiles(); };
+  ts.onkeydown = (e) => { if (e.key === "Escape" && ts.value) { e.preventDefault(); ts.value = ""; renderProfiles(); } };
+  document.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === "k") { e.preventDefault(); ts.focus(); ts.select(); }
+  });
   $$("#lang-choice input").forEach((i) => (i.onchange = () => setLanguage(i.value)));
   $("#tasks-hide-done").onchange = (e) => { pref.set("hideDoneTasks", e.target.checked); renderTasks(st(S.selected)); };
   $("#btn-open-logs").onclick = $("#btn-open-logs-about").onclick = openLogFolder;
@@ -470,23 +477,12 @@ function setSideCollapsed(on) {
   pref.set("sideCollapsed", on);
   syncSide();
 }
-// thanh bên thu gọn chỉ hiện nút đang chọn: bấm nó thì lấy lựa chọn kế tiếp trong nhóm
-function sideCycle(b, key) {
-  if (!document.documentElement.classList.contains("side-collapsed") || !b.classList.contains("active")) return b.dataset[key];
-  const all = [...b.parentElement.querySelectorAll("button:not([hidden])")];  // bỏ nút đang ẩn (Cyberpunk khi tắt chế độ vui)
-  return all[(all.indexOf(b) + 1) % all.length].dataset[key];
-}
 function syncSide() {
   const on = document.documentElement.classList.contains("side-collapsed"), t = $("#side-toggle");
   const label = on ? "Mở rộng thanh bên" : "Thu gọn thanh bên";
   t.title = on ? label : ""; t.setAttribute("aria-label", label); t.setAttribute("aria-expanded", String(!on));
-  $$(".lang-switch button").forEach((b) => {  // gợi ý "bấm để đổi" khi chỉ còn 1 nút
-    if (!b.dataset.tip) b.dataset.tip = b.title || b.textContent.trim();
-    b.title = on ? `${b.dataset.tip} (bấm để đổi)` : b.dataset.tip;
-  });
   t.querySelector("i").className = "ti " + (on ? "ti-layout-sidebar-left-expand" : "ti-layout-sidebar-left-collapse");
   $$("#nav .nav-link").forEach((a) => { a.title = on ? a.querySelector(".nav-link-title").textContent.trim() : ""; });
-  $("#run-state").title = on ? $("#run-state span:last-child").textContent : "";
 }
 
 function go(page) {
@@ -528,7 +524,6 @@ function renderSide() {
   const on = S.running.size > 0;
   $("#run-state").classList.toggle("on", on);
   $("#run-state span:last-child").textContent = on ? `Đang chạy ${S.running.size} tài khoản` : "Đang nghỉ";
-  if (document.documentElement.classList.contains("side-collapsed")) $("#run-state").title = $("#run-state span:last-child").textContent;
   $("#btn-stop-log").hidden = !on;  // Kiểm tra tự chuyển sang Nhật ký nên trang này cũng cần nút Dừng
 }
 
@@ -1029,7 +1024,14 @@ window.addEventListener("resize", () => { clearTimeout(window._rz); window._rz =
 function renderProfiles() {
   const tb = $("#profile-table tbody");
   if ($(".dropdown-menu.show", tb)) { renderProfiles._defer = true; return; }  // đang mở menu thao tác: vẽ lại sau khi đóng
-  if (!S.profiles.length) {
+  renderProfileKpis();
+  // ô tìm kiếm ở thanh trên cùng lọc bảng theo tên tài khoản
+  const q = $("#top-search").value.trim().toLowerCase();
+  const shown = q ? S.profiles.filter((p) => p.name.toLowerCase().includes(q)) : S.profiles;
+  if (S.profiles.length && !shown.length) {
+    tb.innerHTML = `<tr><td colspan="8">${stateBlock({ icon: "ti-search", title: "Không tìm thấy tài khoản",
+      text: "Thử từ khóa khác hoặc xóa ô tìm kiếm." })}</td></tr>`;
+  } else if (!S.profiles.length) {
     tb.innerHTML = `<tr><td colspan="8">${stateBlock({ icon: "ti-users", title: "Chưa có tài khoản",
       text: "Thêm tài khoản, bấm Đăng nhập một lần rồi chạy.",
       action: { id: "btn-empty-add", icon: "ti-user-plus", label: "Thêm tài khoản" } })}</td></tr>`;
@@ -1042,7 +1044,7 @@ function renderProfiles() {
         aria-expanded="false" aria-haspopup="true" aria-label="Thêm thao tác" title="Thêm thao tác"><i class="ti ti-dots-vertical"></i></button>
       <ul class="dropdown-menu dropdown-menu-end">${mi("check", "ti-stethoscope", "Kiểm tra") + mi("login", "ti-login", "Đăng nhập")
         + mi("edit", "ti-pencil", "Sửa") + `<li><hr class="dropdown-divider"></li>` + mi("del", "ti-trash", "Xóa", "text-danger")}</ul></div>`;
-    tb.innerHTML = S.profiles.map((p) => {
+    tb.innerHTML = shown.map((p) => {
       const s = st(p.name), run = S.running.has(p.name);
       return `<tr data-name="${esc(p.name)}">
         <td>${avatarHtml(p.name, `avatar-sm rounded-circle ${run ? "run" : ""}`)}</td>
@@ -1078,6 +1080,23 @@ function renderProfiles() {
   }
   renderToggles();
   $("#max-parallel").value = S.settings.max_parallel;
+}
+
+// 4 ô tóm tắt đầu trang Tài khoản (như dải CPU / RAM ở trang Containers của Docker Desktop)
+function renderProfileKpis() {
+  const box = $("#profile-kpis");
+  box.hidden = !S.profiles.length;
+  if (box.hidden) return;
+  const ss = S.profiles.map((p) => st(p.name));
+  const sum = (k) => ss.reduce((a, s) => a + (s[k] || 0), 0);
+  const known = (k) => ss.some((s) => s[k] != null);
+  const bad = ss.filter((s) => ["Lỗi", "Chưa đăng nhập"].includes(s.state)).length;
+  const tile = (ic, label, val, sub, cls = "") => `<div class="kpi ${cls}"><span class="kpi-ic"><i class="ti ${ic}"></i></span>
+    <div class="min-w-0"><div class="kpi-label">${label}</div><div class="kpi-value">${val}</div><div class="kpi-sub">${sub}</div></div></div>`;
+  box.innerHTML = tile("ti-coin", "Tổng điểm hiện có", known("points") ? fmt(sum("points")) : "—", `${S.profiles.length} tài khoản`)
+    + tile("ti-trending-up", "Điểm hôm nay", known("today") ? "+" + fmt(sum("today")) : "—", "cộng mọi tài khoản")
+    + tile("ti-player-play", "Đang chạy", `${S.running.size} / ${S.profiles.length}`, S.running.size ? "tài khoản đang làm task" : "bot đang nghỉ")
+    + tile("ti-alert-triangle", "Cần chú ý", fmt(bad), bad ? "lỗi hoặc chưa đăng nhập" : "không có tài khoản lỗi", bad ? "bad" : "good");
 }
 
 function renderToggles() {
@@ -1440,6 +1459,22 @@ function renderSettings(keep = false) {
     const e = id && document.getElementById(id);
     if (e) e[typeof v === "boolean" ? "checked" : "value"] = v;
   }
+  renderSettingsNav();
+}
+// mục con bên trái trang Cài đặt: một nút cho mỗi thẻ (lấy theo tiêu đề), bấm thì cuộn tới thẻ và đánh dấu đang chọn
+function renderSettingsNav() {
+  const cards = $$("#settings-cards .card").filter((c) => !c.hidden && $(".card-title", c));
+  $("#settings-nav").innerHTML = cards.map((c, i) => {
+    c.id ||= "set-sec-" + i;
+    const t = $(".card-title", c);
+    const ic = $("i.ti", t)?.className.replace(/\bme-\d\b/, "").trim() || "ti ti-point";
+    return `<button type="button" class="settings-nav-item" data-target="${c.id}"><i class="${ic}" aria-hidden="true"></i><span>${esc(t.textContent.trim())}</span></button>`;
+  }).join("");
+  $$("#settings-nav button").forEach((b) => (b.onclick = () => {
+    $$("#settings-nav button").forEach((x) => x.removeAttribute("aria-current"));
+    b.setAttribute("aria-current", "true");
+    document.getElementById(b.dataset.target).scrollIntoView({ behavior: "smooth", block: "start" });
+  }));
 }
 async function saveSettingsForm() {
   const partial = { browser_channel: $("#set-browser").value };

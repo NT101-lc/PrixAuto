@@ -42,24 +42,23 @@ body { overflow-y: scroll; }
 .side .navbar-nav .nav-link { border-radius: 8px; margin: 2px 8px; padding: .55rem .75rem; justify-content: flex-start !important; }
 .side .nav-link.active { background: rgba(255, 255, 255, .08); color: #fff; }
 .side .nav-link.active .nav-link-icon { color: #60a5fa; }  /* sáng hơn để đạt >= 3:1 trên nền thanh bên tối */
-.brand { display: flex; align-items: center; gap: 10px; padding: 18px 16px 6px; color: #fff; }
+.brand { display: flex; align-items: center; gap: 10px; color: #fff; }
 .brand strong { display: block; font-size: 15px; }
-.brand div > span { display: block; font-size: 12px; color: rgba(255, 255, 255, .72); }
-.brand-logo { width: 38px; height: 38px; flex: none; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .35)); }
-.side-foot { margin-top: auto; padding: 14px 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+.brand-logo { width: 28px; height: 28px; flex: none; object-fit: contain; }
+.side-foot { margin-top: auto; padding: 10px 8px 12px; display: flex; flex-direction: column; gap: 12px; }
 /* ngôn ngữ: khối có bản viết sẵn cho từng ngôn ngữ (data-lang) chỉ hiện đúng ngôn ngữ đang chọn */
 html[lang="en"] [data-lang="vi"], html:not([lang="en"]) [data-lang="en"] { display: none !important; }
-.lang-switch { display: flex; background: rgba(255, 255, 255, .06); border-radius: 10px; padding: 3px; }
-.lang-switch button { flex: 1; border: 0; background: none; color: rgba(255, 255, 255, .6); border-radius: 8px; padding: 4px 0;
+.lang-switch { display: flex; background: rgba(255, 255, 255, .06); border: 1px solid var(--dk-line); border-radius: 7px; padding: 2px; }
+.lang-switch button { flex: 1; border: 0; background: none; color: rgba(255, 255, 255, .72); border-radius: 5px; padding: 3px 10px;
   font-size: 12px; font-weight: 600; letter-spacing: .06em; }
 .lang-switch button:hover { color: #fff; }
 .lang-switch button.active { background: rgba(255, 255, 255, .14); color: #fff; }
 #lang-choice { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 #lang-choice .form-selectgroup-item { margin: 0; }
-.run-state { display: flex; align-items: center; gap: 8px; font-size: 13px; color: rgba(255, 255, 255, .6); }
+.run-state { display: flex; align-items: center; gap: 8px; font-size: 12px; color: rgba(255, 255, 255, .72); }
 .run-state .status-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255, 255, 255, .35); }
 .run-state.on { color: #fff; }
-.side-version { font-size: 12px; color: rgba(255, 255, 255, .6); font-variant-numeric: tabular-nums; }
+.side-version { margin-left: auto; font-variant-numeric: tabular-nums; }
 .side-version:empty { display: none; }
 .side .nav-fun { margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(255, 255, 255, .06); }
 .run-state.on .status-dot { position: relative; background: #2fb344; }
@@ -69,7 +68,88 @@ html[lang="en"] [data-lang="vi"], html:not([lang="en"]) [data-lang="en"] { displ
 @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 70%, 100% { transform: scale(2.75); opacity: 0; } }
 @media (min-width: 992px) {
   .side { position: fixed; top: 0; bottom: 0; left: 0; transition: width .18s ease; overflow-x: hidden; }
+  /* Tabler đặt top/bottom 0 cho .navbar-vertical: cần selector mạnh hơn để chừa chỗ cho thanh trên + thanh trạng thái */
+  .side.navbar-vertical { top: var(--dk-top-h); bottom: var(--dk-status-h); }
   .page-wrapper { margin-left: 15rem; transition: margin-left .18s ease; }
+}
+
+/* ---------------------------------------------------------------- khung kiểu Docker Desktop
+   Thanh trên cùng (logo, ngôn ngữ) + thanh bên + thanh trạng thái dưới đáy luôn tối như Docker, dù trang sáng hay tối. */
+:root {
+  --dk-top-h: 52px;
+  --dk-status-h: 28px;
+  --dk-chrome: #10141a;      /* thanh trên + thanh trạng thái */
+  --dk-side: #151a21;        /* thanh bên */
+  --dk-line: #2a313c;
+  --dk-active: #24324a;      /* mục đang chọn ở thanh bên */
+  --dk-active-ic: #7fb0ff;
+}
+body { padding-top: var(--dk-top-h); padding-bottom: var(--dk-status-h); }
+.topbar { position: fixed; top: 0; left: 0; right: 0; z-index: 1035; height: var(--dk-top-h); display: flex; align-items: center;
+  gap: 16px; padding: 0 16px; background: var(--dk-chrome); border-bottom: 1px solid var(--dk-line); color: #e6e9ef; }
+.topbar .brand { width: calc(15rem - 32px); flex: none; }
+.topbar .lang-switch { margin-left: auto; }
+/* ô tìm kiếm giữa thanh trên cùng */
+.top-search { flex: 0 1 460px; min-width: 0; display: flex; align-items: center; gap: 8px; margin: 0; height: 34px; padding: 0 8px 0 10px;
+  border: 1px solid var(--dk-line); border-radius: 6px; background: #1b2028; color: rgba(255, 255, 255, .72); cursor: text; }
+.top-search:focus-within { border-color: #3b82f6; }
+.top-search input { flex: 1; min-width: 0; border: 0; border-radius: 3px; background: transparent; color: #e6e9ef; font-size: 13px; }
+.top-search input::placeholder { color: rgba(255, 255, 255, .6); }
+.top-search kbd { font-size: 11px; padding: 1px 5px; border: 1px solid var(--dk-line); border-radius: 4px; background: none; color: inherit;
+  box-shadow: none; white-space: nowrap; }
+@media (max-width: 575.98px) { .topbar .brand { width: auto; } .top-search kbd { display: none; } }
+
+/* trang Cài đặt: danh sách mục bên trái + các thẻ bên phải (như Settings của Docker Desktop) */
+.settings-layout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 24px; align-items: start; }
+.settings-nav { position: sticky; top: calc(var(--dk-top-h) + 16px); display: flex; flex-direction: column; gap: 2px; }
+.settings-nav-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 12px; border: 0; border-radius: 6px;
+  background: none; color: var(--tblr-body-color); font-size: 14px; text-align: left; }
+.settings-nav-item .ti { font-size: 17px; color: var(--tblr-secondary); }
+.settings-nav-item:hover { background: var(--tblr-bg-surface-secondary); }
+.settings-nav-item[aria-current="true"] { background: rgba(var(--tblr-primary-rgb), .14); font-weight: 600; }
+.settings-nav-item[aria-current="true"] .ti { color: var(--tblr-primary); }
+#settings-cards .card { scroll-margin-top: calc(var(--dk-top-h) + 16px); }
+/* trên trang: các thẻ xếp một cột, rộng tối đa 900px (hộp Cài đặt ở trang Văn phòng vẫn chia 2 cột) */
+.settings-layout #settings-cards { max-width: 900px; }
+.settings-layout #settings-cards > [class*="col-lg-"] { flex: 0 0 100%; max-width: 100%; }
+@media (max-width: 991.98px) {
+  .settings-layout { grid-template-columns: minmax(0, 1fr); }
+  .settings-nav { position: static; flex-direction: row; flex-wrap: wrap; }
+  .settings-nav-item { width: auto; }
+}
+.statusbar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 1035; height: var(--dk-status-h); display: flex; align-items: center;
+  gap: 18px; padding: 0 16px; background: var(--dk-chrome); border-top: 1px solid var(--dk-line); font-size: 12px;
+  color: rgba(255, 255, 255, .72); white-space: nowrap; overflow: hidden; }
+.statusbar .run-state.on { color: #fff; }
+.side.navbar-vertical { --tblr-navbar-bg: var(--dk-side); background: var(--dk-side); border-right: 1px solid var(--dk-line); box-shadow: none; }
+.side .navbar-nav { padding-top: 12px !important; }
+.side .navbar-nav .nav-link { border-radius: 6px; margin: 1px 10px; color: #c4cbd6; }
+.side .navbar-nav .nav-link:hover { background: rgba(255, 255, 255, .05); color: #fff; }
+.side .nav-link.active { background: var(--dk-active); color: #fff; font-weight: 600; }
+.side .nav-link.active .nav-link-icon { color: var(--dk-active-ic); }
+.side .nav-fun { border-top-color: var(--dk-line); }
+.app-toast { bottom: calc(var(--dk-status-h) + 16px); }
+
+/* bảng màu tối: nền xanh than như Docker Desktop (Cyberpunk ghi đè lại bằng biến của nó) */
+[data-bs-theme="dark"] {
+  --tblr-body-bg: #1b2028;
+  --tblr-body-bg-rgb: 27, 32, 40;
+  --tblr-bg-surface: #222833;
+  --tblr-bg-surface-secondary: #1a1f27;
+  --tblr-bg-surface-tertiary: #1a1f27;
+  --tblr-border-color: #2e3542;
+  --tblr-border-color-translucent: rgba(255, 255, 255, .07);
+  --tblr-body-color: #e6e9ef;
+}
+/* thẻ, bảng: góc 8px, tiêu đề bảng chữ thường trên nền tối hơn (như danh sách container của Docker) */
+.card { border-radius: 8px; }
+.table thead th { text-transform: none; letter-spacing: 0; font-size: 12px; font-weight: 600; color: var(--tblr-secondary);
+  background: var(--tblr-bg-surface-secondary); }
+.table > :not(caption) > * > * { padding-top: .7rem; padding-bottom: .7rem; }
+.btn { border-radius: 6px; }
+@media (max-width: 991.98px) {
+  .topbar, .statusbar { position: static; }
+  body { padding-top: 0; padding-bottom: 0; }
 }
 
 /* ---------------------------------------------------------------- chung */
@@ -383,25 +463,17 @@ img.broken { visibility: hidden; }
   background: none; color: rgba(255, 255, 255, .5); font-size: 13px; text-align: left; }
 .side-toggle i { font-size: 18px; flex: none; }
 .side-toggle:hover { background: rgba(255, 255, 255, .06); color: #fff; }
-.side-foot .side-toggle { margin-top: -4px; border-top: 1px solid rgba(255, 255, 255, .06); border-radius: 0 0 8px 8px; padding-top: 10px; }
+.side-foot .side-toggle { border-radius: 8px; }
 @media (max-width: 991.98px) { .side-toggle { display: none; } }
 @media (min-width: 992px) {
   html.side-collapsed .side.navbar-vertical { width: 4.5rem; }
   html.side-collapsed .side.navbar-vertical ~ .page-wrapper { margin-left: 4.5rem; }
-  html.side-collapsed .brand { justify-content: center; padding: 18px 0 6px; }
-  html.side-collapsed .brand > div { display: none; }
   html.side-collapsed .side .nav-link-title { display: none; }
   html.side-collapsed .side .navbar-nav .nav-link { position: relative; justify-content: center !important; margin: 2px 12px; padding: .6rem 0; }
   html.side-collapsed .side .nav-link-icon { margin: 0; }
   html.side-collapsed .side .navbar-nav .nav-link #log-badge { position: absolute; top: 4px; right: 6px; min-width: 0; margin: 0;
     padding: 2px 4px; font-size: 9px; line-height: 1; }
   html.side-collapsed .side-foot { padding: 12px 12px 14px; align-items: stretch; gap: 8px; }
-  /* chỉ còn nút đang chọn của mỗi nhóm; bấm vào để chuyển (sideCycle trong app.js) */
-  html.side-collapsed .lang-switch button:not(.active) { display: none; }
-  html.side-collapsed .lang-switch button { padding: 8px 0; }
-  html.side-collapsed .side-version { text-align: center; font-size: 10px; }
-  html.side-collapsed .run-state { justify-content: center; padding: 4px 0; }
-  html.side-collapsed .run-state span:last-child { display: none; }
   html.side-collapsed .side-toggle { justify-content: center; padding: 10px 0 4px; }
   html.side-collapsed .side-toggle span { display: none; }
 }

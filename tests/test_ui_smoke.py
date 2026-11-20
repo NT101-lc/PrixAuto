@@ -586,7 +586,7 @@ def test_neutral_palette_phase1(server, fun):
             # TC-1.3: tương phản WCAG >= 4.5 cho MỌI phần tử hiện (chữ), icon >= 3
             plain = (".prow .pts", ".srow .sub")  # chế độ vui tắt: danh sách tiến độ + bảng streak
             stamps = (".stamp .pts", ".streak-row .sub")  # chế độ vui bật: đĩa dấu + thẻ streak
-            checks = {"dashboard": (".brand span", ".hero-mini .lbl", ".text-secondary", ".side .nav-link", ".hero-state",
+            checks = {"dashboard": (".statusbar #brand-sub", ".statusbar .run-state", ".hero-mini .lbl", ".text-secondary", ".side .nav-link", ".hero-state",
                                     ".kpi-label", ".meter .val") + (stamps if fun else plain),
                       "log": (".log-head .lvl",), "settings": (".text-secondary",)}
             for page, sels in checks.items():
@@ -855,24 +855,58 @@ def test_lofi_follows_fun_mode(server):
         assert errors == []
 
 
+def test_docker_shell_search_kpis_and_settings_nav(server):
+    """Khung kiểu Docker Desktop: ô tìm kiếm ở thanh trên cùng lọc bảng tài khoản (Ctrl+K vào ô, Esc xóa), 4 ô tóm tắt đầu
+    trang Tài khoản, trang Cài đặt có mục con bên trái bấm là cuộn tới thẻ."""
+    boot = boot_n(12)
+    with app_page(server, boot) as (pg, errors):
+        rows = "#profile-table tbody tr[data-name]"
+        pg.keyboard.press("Control+k")
+        assert pg.evaluate("document.activeElement.id") == "top-search"
+        pg.keyboard.type("acc1")  # acc1, acc10, acc11
+        assert pg.evaluate("S.page") == "profiles"
+        assert pg.evaluate(f"[...document.querySelectorAll('{rows}')].map((r) => r.dataset.name)") == ["acc1", "acc10", "acc11"]
+        pg.fill("#top-search", "zzz")
+        assert pg.locator(rows).count() == 0
+        assert "Không tìm thấy tài khoản" in pg.locator("#profile-table").inner_text()
+        pg.press("#top-search", "Escape")
+        assert pg.input_value("#top-search") == "" and pg.locator(rows).count() == 12
+        kpis = pg.locator("#profile-kpis .kpi")
+        assert kpis.count() == 4
+        assert "0 / 12" in kpis.nth(2).inner_text()
+        pg.evaluate("go('settings')")
+        items = pg.locator("#settings-nav .settings-nav-item")
+        titles = [t.strip() for t in items.all_inner_texts()]
+        assert "Giao diện" in titles and "Thông báo" in titles and "Giới thiệu" in titles, titles
+        assert items.count() == pg.evaluate("[...document.querySelectorAll('#settings-cards .card')].filter((c) => c.querySelector('.card-title')).length")
+        about = items.filter(has_text="Giới thiệu")
+        about.click()
+        assert about.get_attribute("aria-current") == "true"
+        pg.wait_for_timeout(800)  # cuộn mượt
+        top = pg.evaluate("document.querySelector('#about-card').getBoundingClientRect().top")
+        assert 0 <= top < 200, top
+        assert errors == []
+
+
 def test_sidebar_order_version_and_theme_in_settings(server):
-    """TC-4.1..4.3: menu theo thứ tự mới (Văn phòng cuối, chỉ khi bật chế độ vui), chân thanh bên có số phiên bản và không còn
-    nút sáng / tối (đổi ở Cài đặt); thu gọn thì nút ngôn ngữ còn một, bấm là đổi VI <-> EN."""
+    """TC-4.1..4.3: menu theo thứ tự mới (Văn phòng cuối, chỉ khi bật chế độ vui), thanh trạng thái có số phiên bản, thanh bên
+    không còn nút sáng / tối (đổi ở Cài đặt); nút ngôn ngữ ở thanh trên cùng, thu gọn thanh bên vẫn hiện đủ VI / EN."""
     boot = boot_n(1)
     boot["settings"]["theme"] = "light"
     with app_page(server, boot, init="localStorage.setItem('sideCollapsed', 'true');") as (pg, errors):
         order = pg.evaluate("[...document.querySelectorAll('#nav [data-page]')].map((a) => a.dataset.page)")
         assert order == ["dashboard", "profiles", "history", "log", "settings", "guide", "office"], order
         assert pg.locator(".side .theme-switch").count() == 0
-        assert pg.locator("#side-version").inner_text().strip() == "v" + boot["app"]["version"]
+        assert pg.locator(".statusbar #side-version").inner_text().strip() == "v" + boot["app"]["version"]
         assert pg.locator("#nav [data-page=history]").get_attribute("title") == "Lịch sử"
+        assert pg.locator(".topbar .lang-switch button").count() == 2
+        assert pg.locator(".topbar .lang-switch button[data-set-lang=en]").is_visible()
         seq = []
-        for _ in range(3):
-            pg.locator(".lang-switch button.active").click()
+        for lang in ("en", "en", "vi"):  # bấm nút đang chọn thì giữ nguyên
+            pg.click(f".lang-switch button[data-set-lang={lang}]")
             seq.append(pg.evaluate("S.settings.language"))
-        assert seq == ["en", "vi", "en"], seq
-        assert pg.get_attribute(".lang-switch button[data-set-lang=en]", "aria-checked") == "true"
-        pg.locator(".lang-switch button.active").click()
+        assert seq == ["en", "en", "vi"], seq
+        assert pg.get_attribute(".lang-switch button[data-set-lang=vi]", "aria-checked") == "true"
         pg.evaluate("go('settings')")
         pg.click("#theme-choice label:has(input[value=dark])")
         assert pg.evaluate("document.documentElement.dataset.bsTheme") == "dark"

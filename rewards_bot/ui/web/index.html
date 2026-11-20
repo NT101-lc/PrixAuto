@@ -15,14 +15,26 @@
 <link rel="stylesheet" href="cyberpunk.css">
 </head>
 <body>
+<!-- ======================== Thanh trên cùng (kiểu Docker Desktop): logo + đổi ngôn ngữ ======================== -->
+<header class="topbar" data-bs-theme="dark">
+  <div class="brand">
+    <img class="brand-logo" src="assets/app-icon.png" alt="">
+    <strong data-no-i18n>PrixAuto</strong>
+  </div>
+  <label class="top-search">
+    <i class="ti ti-search" aria-hidden="true"></i>
+    <input type="search" id="top-search" placeholder="Tìm tài khoản" aria-label="Tìm tài khoản" autocomplete="off" spellcheck="false">
+    <kbd data-no-i18n>Ctrl K</kbd>
+  </label>
+  <div class="lang-switch" role="radiogroup" aria-label="Ngôn ngữ">
+    <button type="button" role="radio" data-set-lang="vi" title="Tiếng Việt" data-no-i18n>VI</button>
+    <button type="button" role="radio" data-set-lang="en" title="English">EN</button>
+  </div>
+</header>
 <div class="page">
   <!-- ======================== Thanh bên ======================== -->
   <aside class="navbar navbar-vertical navbar-expand-lg side" data-bs-theme="dark">
     <div class="container-fluid">
-      <div class="brand">
-        <img class="brand-logo" src="assets/app-icon.png" alt="">
-        <div><strong data-no-i18n>PrixAuto</strong><span id="brand-sub">0 tài khoản</span></div>
-      </div>
       <ul class="navbar-nav pt-lg-3" id="nav">
         <li class="nav-item"><a class="nav-link active" href="#" data-page="dashboard">
           <span class="nav-link-icon"><i class="ti ti-layout-dashboard"></i></span><span class="nav-link-title">Tổng quan</span></a></li>
@@ -41,14 +53,8 @@
         <li class="nav-item nav-fun" data-fun-only hidden><a class="nav-link" href="#" data-page="office">
           <span class="nav-link-icon"><i class="ti ti-building-skyscraper"></i></span><span class="nav-link-title">Văn phòng</span></a></li>
       </ul>
-      <!-- sáng / tối nằm ở trang Cài đặt; thanh bên chỉ còn đổi ngôn ngữ, trạng thái chạy, phiên bản và nút thu gọn -->
+      <!-- ngôn ngữ ở thanh trên cùng; trạng thái chạy và phiên bản ở thanh trạng thái dưới đáy; ở đây chỉ còn nút thu gọn -->
       <div class="side-foot">
-        <div class="lang-switch" role="radiogroup" aria-label="Ngôn ngữ">
-          <button type="button" role="radio" data-set-lang="vi" title="Tiếng Việt" data-no-i18n>VI</button>
-          <button type="button" role="radio" data-set-lang="en" title="English">EN</button>
-        </div>
-        <div class="run-state" id="run-state" role="status"><span class="status-dot"></span><span>Đang nghỉ</span></div>
-        <div class="side-version" id="side-version" data-no-i18n></div>
         <button type="button" class="side-toggle" id="side-toggle" aria-label="Thu gọn thanh bên" aria-expanded="true">
           <i class="ti ti-layout-sidebar-left-collapse"></i><span>Thu gọn</span></button>
       </div>
@@ -197,6 +203,7 @@
       </div></div>
       <div class="page-body"><div class="container-xl">
         <p class="text-secondary small page-hint">Chạy mọi task một lần: làm mọi việc kể cả công tắc đang tắt, chỉ lần này và không đổi cài đặt đã lưu.</p>
+        <div class="kpis mb-3" id="profile-kpis"></div>
         <div class="row row-cards">
           <div class="col-12">
             <div class="card">
@@ -313,14 +320,16 @@
         <h2 class="page-title">Cài đặt</h2>
         <div class="ms-auto"><button class="btn btn-primary" id="btn-save-settings"><i class="ti ti-device-floppy"></i>Lưu cài đặt</button></div>
       </div></div>
-      <div class="page-body"><div class="container-xl" id="settings-home">
+      <div class="page-body"><div class="container-xl settings-layout" id="settings-home">
+        <!-- danh sách mục bên trái (kiểu Docker Desktop): app.js dựng từ tiêu đề các thẻ, bấm là cuộn tới thẻ đó -->
+        <nav class="settings-nav" id="settings-nav" aria-label="Mục cài đặt"></nav>
         <!-- khối này được chuyển tạm vào hộp #settings-dialog khi mở Cài đặt từ trang Văn phòng, đóng hộp thì trả về đây -->
         <div class="row row-cards" id="settings-cards">
           <!-- các nhóm cài đặt do app.js vẽ (SETTING_GROUPS): mỗi dòng = nhãn + giải thích bên trái, ô nhập bên phải -->
           <div class="col-lg-8 d-flex flex-column gap-3" id="settings-form"></div>
           <div class="col-lg-4 d-flex flex-column gap-3">
             <div class="card">
-              <div class="card-header"><h3 class="card-title">Giao diện</h3></div>
+              <div class="card-header"><h3 class="card-title"><i class="ti ti-palette me-2"></i>Giao diện</h3></div>
               <div class="card-body">
                 <div class="form-selectgroup w-100" id="theme-choice">
                   <label class="form-selectgroup-item flex-fill"><input type="radio" name="theme" value="light" class="form-selectgroup-input">
@@ -378,7 +387,7 @@
               </div>
             </div>
             <div class="card" id="about-card">
-              <div class="card-header"><h3 class="card-title">Giới thiệu</h3><div class="card-actions text-secondary" id="app-version"></div></div>
+              <div class="card-header"><h3 class="card-title"><i class="ti ti-info-circle me-2"></i>Giới thiệu</h3><div class="card-actions text-secondary" id="app-version"></div></div>
               <div class="card-body d-flex flex-column gap-3">
                 <div class="about-app"><img src="assets/app-icon.png" alt="">
                   <div><strong data-no-i18n>PrixAuto</strong><span>Tự làm các việc Microsoft Rewards hằng ngày cho nhiều tài khoản.</span></div></div>
@@ -407,7 +416,7 @@
               </div>
             </div>
             <div class="card settings-help">
-              <div class="card-header"><h3 class="card-title">Chạy nhiều cửa sổ cùng lúc</h3></div>
+              <div class="card-header"><h3 class="card-title"><i class="ti ti-app-window me-2"></i>Chạy nhiều cửa sổ cùng lúc</h3></div>
               <div class="card-body help" data-lang="vi">
                 <p><strong>Cửa sổ riêng</strong> (nên dùng): mỗi tài khoản có thư mục riêng trong <code>data/profiles</code>. Bấm <em>Đăng nhập</em> một lần cho mỗi tài khoản rồi chạy.</p>
                 <p><strong>Gắn vào Edge đang mở</strong>: tự mở Edge với cổng debug và thư mục riêng, đăng nhập trong đó, rồi thêm tài khoản chế độ này với cổng tương ứng:</p>
@@ -783,6 +792,12 @@
     </section>
   </div>
 </div>
+<!-- ======================== Thanh trạng thái dưới đáy (kiểu Docker Desktop) ======================== -->
+<footer class="statusbar" data-bs-theme="dark">
+  <div class="run-state" id="run-state" role="status"><span class="status-dot"></span><span>Đang nghỉ</span></div>
+  <span id="brand-sub">0 tài khoản</span>
+  <span class="side-version" id="side-version" data-no-i18n></span>
+</footer>
 
 <dialog id="settings-dialog" class="dlg dlg-wide" aria-labelledby="sd-title">
   <div class="dlg-head"><h3 class="m-0" id="sd-title">Cài đặt</h3>

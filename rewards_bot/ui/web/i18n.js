@@ -48,6 +48,13 @@ const I18N = (() => {
     "Đăng nhập": "Log in", "Làm mới": "Refresh", "Sao chép": "Copy", "Tất cả": "All", "Lỗi": "Error",
     "Cảnh báo": "Warning", "Xong": "Done", "điểm": "points", "# điểm": "# points", "# ngày": "# days", "# tuần": "# weeks",
     "# ngày gần nhất": "last # days", "lượt": "times", "bước": "steps", "Ít": "Less", "Nhiều": "More",
+    // ---- thanh trên cùng (tìm kiếm), ô tóm tắt trang Tài khoản, mục con trang Cài đặt
+    "Tìm tài khoản": "Search accounts", "Không tìm thấy tài khoản": "No matching accounts",
+    "Thử từ khóa khác hoặc xóa ô tìm kiếm.": "Try another word or clear the search box.",
+    "Tổng điểm hiện có": "Total balance", "Điểm hôm nay": "Points today", "cộng mọi tài khoản": "across all accounts",
+    "tài khoản đang làm task": "accounts working on tasks", "bot đang nghỉ": "bot is idle", "Cần chú ý": "Needs attention",
+    "lỗi hoặc chưa đăng nhập": "error or not logged in", "không có tài khoản lỗi": "no accounts with errors",
+    "Mục cài đặt": "Settings sections",
     "T2": "Mon", "T3": "Tue", "T4": "Wed", "T5": "Thu", "T6": "Fri", "T7": "Sat", "CN": "Sun",
     // ---- trạng thái (từ bot)
     "Sẵn sàng": "Ready", "Đang chạy": "Running", "Đang chờ": "Waiting", "Đang làm mới": "Refreshing",
