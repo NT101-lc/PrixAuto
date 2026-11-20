@@ -52,6 +52,8 @@ const I18N = (() => {
     "Tìm tài khoản, cài đặt, hướng dẫn, nhật ký…": "Search accounts, settings, help, logs…", "Tìm trong app": "Search the app",
     "Kết quả tìm kiếm": "Search results", "Không tìm thấy kết quả": "No results", "Trang": "Pages",
     "Hướng dẫn & FAQ": "Help & FAQ", "# dòng khớp": "# matching lines",
+    "Thao tác": "Actions", "Thao tác nhanh": "Quick actions", "Hay dùng": "Frequently used", "Gợi ý": "Suggested",
+    "Chạy tất cả tài khoản": "Run all accounts", "Làm mới điểm": "Refresh points",
     "Tổng điểm hiện có": "Total balance", "Điểm hôm nay": "Points today", "cộng mọi tài khoản": "across all accounts",
     "tài khoản đang làm task": "accounts working on tasks", "bot đang nghỉ": "bot is idle", "Cần chú ý": "Needs attention",
     "lỗi hoặc chưa đăng nhập": "error or not logged in", "không có tài khoản lỗi": "no accounts with errors",

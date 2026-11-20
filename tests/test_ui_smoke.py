@@ -865,6 +865,10 @@ def test_docker_shell_search_kpis_and_settings_nav(server):
         titles = lambda: [t.strip() for t in res.locator(".sr-title").all_inner_texts()]  # noqa: E731
         pg.keyboard.press("Control+k")
         assert pg.evaluate("document.activeElement.id") == "top-search"
+        # ô trống, chưa mở gì: gợi ý mặc định + thao tác nhanh
+        assert res.is_visible() and groups() == ["Gợi ý", "Thao tác nhanh"], groups()
+        assert titles()[:4] == ["Tổng quan", "Tài khoản", "Nhật ký", "Cài đặt"], titles()
+        assert "Chạy tất cả tài khoản" in titles() and "Thêm tài khoản" in titles()
         # tài khoản: tối đa 5 mỗi nhóm; Enter mở tổng quan của tài khoản đầu tiên
         pg.keyboard.type("acc1")
         assert res.is_visible() and groups() == ["Tài khoản"]
@@ -874,6 +878,10 @@ def test_docker_shell_search_kpis_and_settings_nav(server):
         pg.keyboard.press("Enter")
         assert pg.evaluate("[S.page, S.selected]") == ["dashboard", "acc10"]
         assert res.is_hidden() and pg.input_value("#top-search") == ""
+        # khớp ngay tên đứng trước khớp phụ đề: "acc10" -> tài khoản acc10 trước "Làm mới điểm · acc10"
+        pg.fill("#top-search", "acc10")
+        assert groups()[0] == "Tài khoản" and titles()[0] == "acc10", (groups(), titles())
+        pg.press("#top-search", "Escape")
         # cài đặt, gõ không dấu: mở trang Cài đặt và đưa dòng đó vào tầm nhìn
         pg.fill("#top-search", "nghi it nhat")
         assert "Cài đặt" in groups() and "Nghỉ ít nhất giữa 2 lượt search" in titles(), titles()
@@ -900,8 +908,20 @@ def test_docker_shell_search_kpis_and_settings_nav(server):
         assert groups()[0] == "Trang" and titles()[0] == "Lịch sử"
         pg.fill("#top-search", "zzzz")
         assert "Không tìm thấy kết quả" in res.inner_text()
+        # Esc xóa chữ -> hiện "Hay dùng": các mục đã mở, mới mở gần nhất đứng đầu khi số lần bằng nhau; Esc lần nữa thì đóng
         pg.press("#top-search", "Escape")
-        assert pg.input_value("#top-search") == "" and res.is_hidden()
+        assert pg.input_value("#top-search") == "" and groups() == ["Hay dùng", "Thao tác nhanh"], groups()
+        assert titles()[:3] == ["Phiên đăng nhập hết hạn", "Nghỉ ít nhất giữa 2 lượt search", "acc10"], titles()
+        assert pg.evaluate("Object.keys(JSON.parse(localStorage.getItem('searchUsage')))").count("acc:acc10") == 1
+        pg.press("#top-search", "Escape")
+        assert res.is_hidden()
+        # mở acc10 thêm 2 lần -> vượt lên đầu nhờ số lần mở
+        for _ in range(2):
+            pg.keyboard.press("Control+k")
+            res.locator(".sr-item").filter(has=pg.locator(".sr-title", has_text="acc10")).click()
+        pg.keyboard.press("Control+k")
+        assert titles()[0] == "acc10", titles()
+        pg.press("#top-search", "Escape")
         pg.evaluate("go('profiles')")
         kpis = pg.locator("#profile-kpis .kpi")
         assert kpis.count() == 4
