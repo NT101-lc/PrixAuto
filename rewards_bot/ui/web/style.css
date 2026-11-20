@@ -145,7 +145,7 @@ body { padding-top: var(--dk-top-h); padding-bottom: var(--dk-status-h); }
 .side .nav-link.active { background: var(--dk-active); color: #fff; font-weight: 600; }
 .side .nav-link.active .nav-link-icon { color: var(--dk-active-ic); }
 .side .nav-fun { border-top-color: var(--dk-line); }
-.app-toast { bottom: calc(var(--dk-status-h) + 16px); }
+body .app-toast { bottom: calc(var(--dk-status-h) + 16px); }  /* nằm trên thanh trạng thái (luật .app-toast gốc ở dưới đặt 22px) */
 
 /* bảng màu tối: nền xanh than như Docker Desktop (Cyberpunk ghi đè lại bằng biến của nó) */
 [data-bs-theme="dark"] {
