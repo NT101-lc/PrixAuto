@@ -89,8 +89,9 @@ body { padding-top: var(--dk-top-h); padding-bottom: var(--dk-status-h); }
   gap: 16px; padding: 0 16px; background: var(--dk-chrome); border-bottom: 1px solid var(--dk-line); color: #e6e9ef; }
 .topbar .brand { width: calc(15rem - 32px); flex: none; }
 .topbar .lang-switch { margin-left: auto; }
-/* ô tìm kiếm giữa thanh trên cùng */
-.top-search { flex: 0 1 460px; min-width: 0; display: flex; align-items: center; gap: 8px; margin: 0; height: 34px; padding: 0 8px 0 10px;
+/* ô tìm kiếm giữa thanh trên cùng + bảng kết quả thả xuống */
+.top-search-wrap { position: relative; flex: 0 1 520px; min-width: 0; }
+.top-search { width: 100%; min-width: 0; display: flex; align-items: center; gap: 8px; margin: 0; height: 34px; padding: 0 8px 0 10px;
   border: 1px solid var(--dk-line); border-radius: 6px; background: #1b2028; color: rgba(255, 255, 255, .72); cursor: text; }
 .top-search:focus-within { border-color: #3b82f6; }
 .top-search input { flex: 1; min-width: 0; border: 0; border-radius: 3px; background: transparent; color: #e6e9ef; font-size: 13px; }
@@ -98,6 +99,22 @@ body { padding-top: var(--dk-top-h); padding-bottom: var(--dk-status-h); }
 .top-search kbd { font-size: 11px; padding: 1px 5px; border: 1px solid var(--dk-line); border-radius: 4px; background: none; color: inherit;
   box-shadow: none; white-space: nowrap; }
 @media (max-width: 575.98px) { .topbar .brand { width: auto; } .top-search kbd { display: none; } }
+.search-results { position: absolute; top: calc(100% + 6px); left: 0; right: 0; max-height: min(460px, 70vh); overflow-y: auto;
+  padding: 6px; border: 1px solid var(--dk-line); border-radius: 8px; background: #1b2028; color: #e6e9ef;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, .45); z-index: 1040; }
+.sr-group { padding: 8px 10px 4px; font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: rgba(255, 255, 255, .62); }
+.sr-item { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+.sr-item > .ti { font-size: 17px; color: rgba(255, 255, 255, .7); flex: none; }
+.sr-item[aria-selected="true"] { background: var(--dk-active); }
+.sr-item[aria-selected="true"] > .ti { color: var(--dk-active-ic); }
+.sr-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.sr-sub { margin-left: auto; padding-left: 12px; font-size: 12px; color: rgba(255, 255, 255, .62); white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; max-width: 45%; flex: none; }
+.sr-empty { padding: 14px 10px; color: rgba(255, 255, 255, .62); font-size: 13px; }
+/* phần tử vừa mở từ kết quả tìm: nháy nền một lần */
+.search-hit { animation: search-hit 1.6s ease-out; border-radius: 6px; }
+@keyframes search-hit { 0%, 30% { background-color: rgba(var(--tblr-primary-rgb), .22); } 100% { background-color: transparent; } }
+@media (prefers-reduced-motion: reduce) { .search-hit { animation: none; outline: 2px solid var(--tblr-primary); } }
 
 /* trang Cài đặt: danh sách mục bên trái + các thẻ bên phải (như Settings của Docker Desktop) */
 .settings-layout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 24px; align-items: start; }

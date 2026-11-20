@@ -428,13 +428,7 @@ async function setLanguage(lang) {
 
 function bindStatic() {
   $$(".lang-switch button").forEach((b) => (b.onclick = () => setLanguage(b.dataset.setLang)));  // nằm ở thanh trên cùng, luôn hiện đủ 2 nút
-  // ô tìm kiếm ở thanh trên cùng: gõ là sang trang Tài khoản và lọc theo tên; Ctrl+K để nhảy vào ô, Esc để xóa
-  const ts = $("#top-search");
-  ts.oninput = () => { if (S.page !== "profiles") go("profiles"); else renderProfiles(); };
-  ts.onkeydown = (e) => { if (e.key === "Escape" && ts.value) { e.preventDefault(); ts.value = ""; renderProfiles(); } };
-  document.addEventListener("keydown", (e) => {
-    if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === "k") { e.preventDefault(); ts.focus(); ts.select(); }
-  });
+  Search.bind();
   $$("#lang-choice input").forEach((i) => (i.onchange = () => setLanguage(i.value)));
   $("#tasks-hide-done").onchange = (e) => { pref.set("hideDoneTasks", e.target.checked); renderTasks(st(S.selected)); };
   $("#btn-open-logs").onclick = $("#btn-open-logs-about").onclick = openLogFolder;
@@ -1025,13 +1019,7 @@ function renderProfiles() {
   const tb = $("#profile-table tbody");
   if ($(".dropdown-menu.show", tb)) { renderProfiles._defer = true; return; }  // đang mở menu thao tác: vẽ lại sau khi đóng
   renderProfileKpis();
-  // ô tìm kiếm ở thanh trên cùng lọc bảng theo tên tài khoản
-  const q = $("#top-search").value.trim().toLowerCase();
-  const shown = q ? S.profiles.filter((p) => p.name.toLowerCase().includes(q)) : S.profiles;
-  if (S.profiles.length && !shown.length) {
-    tb.innerHTML = `<tr><td colspan="8">${stateBlock({ icon: "ti-search", title: "Không tìm thấy tài khoản",
-      text: "Thử từ khóa khác hoặc xóa ô tìm kiếm." })}</td></tr>`;
-  } else if (!S.profiles.length) {
+  if (!S.profiles.length) {
     tb.innerHTML = `<tr><td colspan="8">${stateBlock({ icon: "ti-users", title: "Chưa có tài khoản",
       text: "Thêm tài khoản, bấm Đăng nhập một lần rồi chạy.",
       action: { id: "btn-empty-add", icon: "ti-user-plus", label: "Thêm tài khoản" } })}</td></tr>`;
@@ -1044,7 +1032,7 @@ function renderProfiles() {
         aria-expanded="false" aria-haspopup="true" aria-label="Thêm thao tác" title="Thêm thao tác"><i class="ti ti-dots-vertical"></i></button>
       <ul class="dropdown-menu dropdown-menu-end">${mi("check", "ti-stethoscope", "Kiểm tra") + mi("login", "ti-login", "Đăng nhập")
         + mi("edit", "ti-pencil", "Sửa") + `<li><hr class="dropdown-divider"></li>` + mi("del", "ti-trash", "Xóa", "text-danger")}</ul></div>`;
-    tb.innerHTML = shown.map((p) => {
+    tb.innerHTML = S.profiles.map((p) => {
       const s = st(p.name), run = S.running.has(p.name);
       return `<tr data-name="${esc(p.name)}">
         <td>${avatarHtml(p.name, `avatar-sm rounded-circle ${run ? "run" : ""}`)}</td>
@@ -1081,6 +1069,132 @@ function renderProfiles() {
   renderToggles();
   $("#max-parallel").value = S.settings.max_parallel;
 }
+
+// ===================================================================== tìm chung ở thanh trên cùng
+// Như ô tìm của Docker Desktop: gõ là hiện kết quả theo nhóm (trang, tài khoản, cài đặt, hướng dẫn & FAQ, nhật ký);
+// mũi tên lên / xuống để chọn, Enter để mở, Esc để đóng; Ctrl+K nhảy vào ô từ bất kỳ đâu.
+// Chữ của kết quả đọc thẳng từ giao diện nên đã đúng ngôn ngữ đang chọn. So khớp không phân biệt dấu (vd "dang nhap").
+const Search = (() => {
+  const norm = (s) => String(s).normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[đĐ]/g, "d").toLowerCase();
+  const text = (el) => (el?.textContent || "").replace(/\s+/g, " ").trim();
+  const PER_GROUP = 5;
+  let items = [], active = -1;
+
+  // cuộn tới phần tử và nháy nền để mắt bắt được
+  function reveal(el) {
+    if (!el) return;
+    el.scrollIntoView({ block: "center" });
+    el.classList.remove("search-hit"); void el.offsetWidth; el.classList.add("search-hit");
+  }
+  function sources() {
+    const out = [];
+    // trang
+    $$("#nav [data-page]").filter((a) => !a.closest("li").hidden).forEach((a) => out.push({
+      group: "Trang", icon: $(".nav-link-icon i", a)?.className || "ti ti-file", title: text($(".nav-link-title", a)),
+      run: () => go(a.dataset.page) }));
+    // tài khoản: mở tổng quan của tài khoản đó
+    S.profiles.forEach((p) => out.push({
+      group: "Tài khoản", icon: "ti ti-user", title: p.name, sub: [savedEmail(p.name), st(p.name).state].filter(Boolean).join(" · "),
+      run: () => { S.selected = p.name; Charts.reset(); go("dashboard"); } }));
+    // cài đặt: mỗi dòng của các nhóm + mỗi thẻ; khối cài đặt chưa vẽ thì vẽ trước để có chữ
+    if (!$("#settings-form").children.length) renderSettings(true);
+    $$("#settings-cards .card").filter((c) => $(".card-title", c)).forEach((c) => {
+      const card = text($(".card-title", c));
+      out.push({ group: "Cài đặt", icon: "ti ti-settings", title: card, sub: "Cài đặt", run: () => { go("settings"); reveal(document.getElementById(c.id)); } });
+      $$(".set-row", c).forEach((r) => {
+        const id = $(".set-ctl [id]", r)?.id;
+        out.push({ group: "Cài đặt", icon: "ti ti-adjustments", title: text($(".set-label", r)), sub: card, extra: text($(".set-hint", r)),
+          run: () => { go("settings"); reveal(document.getElementById(id)?.closest(".set-row")); } });
+      });
+    });
+    // hướng dẫn & FAQ: tiêu đề từng mục + từng câu hỏi trong mục (bản đúng ngôn ngữ)
+    const guide = $(document.documentElement.lang === "en" ? "#guide-en" : "#guide");
+    $$(".accordion-item", guide).forEach((it) => {
+      const btn = $(".accordion-button", it), sec = text(btn);
+      const open = () => { go("guide"); if (btn.classList.contains("collapsed")) btn.click(); };
+      out.push({ group: "Hướng dẫn & FAQ", icon: "ti ti-book", title: sec, sub: "Hướng dẫn", extra: text($(".accordion-body", it)).slice(0, 400),
+        run: () => { open(); reveal(btn); } });
+      $$("dt", it).forEach((dt) => out.push({
+        group: "Hướng dẫn & FAQ", icon: "ti ti-help-circle", title: text(dt), sub: sec, extra: text(dt.nextElementSibling),
+        run: () => { open(); setTimeout(() => reveal(dt), 380); } }));  // chờ khối mở ra (Bootstrap collapse ~350ms)
+    });
+    return out;
+  }
+  function find(q) {
+    const toks = norm(q).split(/\s+/).filter(Boolean);
+    if (!toks.length) return [];
+    const hit = (s) => toks.every((t) => norm(s).includes(t));
+    const ranked = sources().map((it) => ({ it, r: hit(it.title) ? 0 : hit(`${it.title} ${it.sub || ""} ${it.extra || ""}`) ? 1 : 2 }))
+      .filter((x) => x.r < 2).sort((a, b) => a.r - b.r);
+    const per = {}, res = [];
+    for (const { it } of ranked) if ((per[it.group] = (per[it.group] || 0) + 1) <= PER_GROUP) res.push(it);
+    // nhật ký (dữ liệu bot đã ghi): 1 kết quả gộp, mở trang Nhật ký đã lọc sẵn từ khóa
+    const n = S.logs.filter((l) => hit(`${l.name} ${l.msg}`)).length;
+    if (n) res.push({ group: "Nhật ký", icon: "ti ti-list-search", title: "Tìm trong nhật ký", sub: `${n} dòng khớp`,
+      run: () => { $("#log-filter").value = ""; go("log"); $("#log-search").value = q.trim(); S.logQuery = q.trim().toLowerCase(); renderLog(); } });
+    const order = ["Trang", "Tài khoản", "Cài đặt", "Hướng dẫn & FAQ", "Nhật ký"];
+    return res.sort((a, b) => order.indexOf(a.group) - order.indexOf(b.group));
+  }
+  function render() {
+    const box = $("#search-results"), input = $("#top-search"), q = input.value;
+    items = q.trim() ? find(q) : [];
+    active = items.length ? 0 : -1;
+    if (!q.trim()) { close(); return; }
+    let last = "";
+    box.innerHTML = items.length ? items.map((it, i) => {
+      const head = it.group !== last ? `<div class="sr-group" role="presentation">${esc(it.group)}</div>` : "";
+      last = it.group;
+      return `${head}<div class="sr-item" role="option" id="sr-${i}" data-i="${i}" aria-selected="false">
+        <i class="${esc(it.icon)}" aria-hidden="true"></i><span class="sr-title">${esc(it.title)}</span>${it.sub ? `<span class="sr-sub">${esc(it.sub)}</span>` : ""}</div>`;
+    }).join("") : `<div class="sr-empty">Không tìm thấy kết quả</div>`;
+    box.hidden = false;
+    input.setAttribute("aria-expanded", "true");
+    $$(".sr-item", box).forEach((el) => {
+      el.onmousedown = (e) => e.preventDefault();  // giữ focus ở ô nhập
+      el.onclick = () => pick(+el.dataset.i);
+      el.onmousemove = () => mark(+el.dataset.i);
+    });
+    mark(active);
+  }
+  function mark(i) {
+    active = i;
+    $$("#search-results .sr-item").forEach((el) => el.setAttribute("aria-selected", String(+el.dataset.i === i)));
+    const cur = $(`#sr-${i}`);
+    $("#top-search").setAttribute("aria-activedescendant", cur ? cur.id : "");
+    cur?.scrollIntoView({ block: "nearest" });
+  }
+  function close() {
+    $("#search-results").hidden = true;
+    $("#top-search").setAttribute("aria-expanded", "false");
+    $("#top-search").removeAttribute("aria-activedescendant");
+  }
+  function pick(i) {
+    const it = items[i];
+    if (!it) return;
+    const input = $("#top-search");
+    input.value = ""; close(); input.blur();
+    it.run();
+  }
+  function bind() {
+    const input = $("#top-search");
+    // đóng trễ khi rời ô (để kịp nhận cú bấm chuột); quay lại ô hoặc gõ tiếp thì hủy, không đóng nhầm danh sách mới
+    let closing = 0;
+    input.oninput = () => { clearTimeout(closing); render(); };
+    input.onfocus = () => { clearTimeout(closing); if (input.value.trim()) render(); };
+    input.onblur = () => { closing = setTimeout(close, 120); };
+    input.onkeydown = (e) => {
+      const open = !$("#search-results").hidden && items.length;
+      if (e.key === "ArrowDown" && open) { e.preventDefault(); mark((active + 1) % items.length); }
+      else if (e.key === "ArrowUp" && open) { e.preventDefault(); mark((active - 1 + items.length) % items.length); }
+      else if (e.key === "Enter" && open) { e.preventDefault(); pick(active); }
+      else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); if (input.value) { input.value = ""; close(); } else input.blur(); }
+    };
+    document.addEventListener("keydown", (e) => {
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === "k") { e.preventDefault(); input.focus(); input.select(); }
+    });
+  }
+  return { bind, find };
+})();
 
 // 4 ô tóm tắt đầu trang Tài khoản (như dải CPU / RAM ở trang Containers của Docker Desktop)
 function renderProfileKpis() {

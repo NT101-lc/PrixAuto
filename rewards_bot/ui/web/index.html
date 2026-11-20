@@ -21,11 +21,16 @@
     <img class="brand-logo" src="assets/app-icon.png" alt="">
     <strong data-no-i18n>PrixAuto</strong>
   </div>
-  <label class="top-search">
-    <i class="ti ti-search" aria-hidden="true"></i>
-    <input type="search" id="top-search" placeholder="Tìm tài khoản" aria-label="Tìm tài khoản" autocomplete="off" spellcheck="false">
-    <kbd data-no-i18n>Ctrl K</kbd>
-  </label>
+  <!-- tìm chung (kiểu Docker Desktop): trang, tài khoản, cài đặt, hướng dẫn & FAQ, nhật ký. Kết quả do Search trong app.js vẽ -->
+  <div class="top-search-wrap">
+    <label class="top-search">
+      <i class="ti ti-search" aria-hidden="true"></i>
+      <input type="search" id="top-search" placeholder="Tìm tài khoản, cài đặt, hướng dẫn, nhật ký…" aria-label="Tìm trong app"
+        role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="search-results" autocomplete="off" spellcheck="false">
+      <kbd data-no-i18n>Ctrl K</kbd>
+    </label>
+    <div class="search-results" id="search-results" role="listbox" aria-label="Kết quả tìm kiếm" hidden></div>
+  </div>
   <div class="lang-switch" role="radiogroup" aria-label="Ngôn ngữ">
     <button type="button" role="radio" data-set-lang="vi" title="Tiếng Việt" data-no-i18n>VI</button>
     <button type="button" role="radio" data-set-lang="en" title="English">EN</button>

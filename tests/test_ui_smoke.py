@@ -856,21 +856,53 @@ def test_lofi_follows_fun_mode(server):
 
 
 def test_docker_shell_search_kpis_and_settings_nav(server):
-    """Khung kiểu Docker Desktop: ô tìm kiếm ở thanh trên cùng lọc bảng tài khoản (Ctrl+K vào ô, Esc xóa), 4 ô tóm tắt đầu
-    trang Tài khoản, trang Cài đặt có mục con bên trái bấm là cuộn tới thẻ."""
+    """Khung kiểu Docker Desktop: ô tìm chung ở thanh trên cùng (Ctrl+K vào ô) tìm cả trang, tài khoản, cài đặt, hướng dẫn &
+    FAQ và nhật ký, không phân biệt dấu, chọn bằng phím; 4 ô tóm tắt đầu trang Tài khoản; trang Cài đặt có mục con bên trái."""
     boot = boot_n(12)
     with app_page(server, boot) as (pg, errors):
-        rows = "#profile-table tbody tr[data-name]"
+        res = pg.locator("#search-results")
+        groups = lambda: [t.strip() for t in res.locator(".sr-group").all_text_contents()]  # noqa: E731  (CSS viết hoa)
+        titles = lambda: [t.strip() for t in res.locator(".sr-title").all_inner_texts()]  # noqa: E731
         pg.keyboard.press("Control+k")
         assert pg.evaluate("document.activeElement.id") == "top-search"
-        pg.keyboard.type("acc1")  # acc1, acc10, acc11
-        assert pg.evaluate("S.page") == "profiles"
-        assert pg.evaluate(f"[...document.querySelectorAll('{rows}')].map((r) => r.dataset.name)") == ["acc1", "acc10", "acc11"]
-        pg.fill("#top-search", "zzz")
-        assert pg.locator(rows).count() == 0
-        assert "Không tìm thấy tài khoản" in pg.locator("#profile-table").inner_text()
+        # tài khoản: tối đa 5 mỗi nhóm; Enter mở tổng quan của tài khoản đầu tiên
+        pg.keyboard.type("acc1")
+        assert res.is_visible() and groups() == ["Tài khoản"]
+        assert titles() == ["acc1", "acc10", "acc11"]
+        assert pg.get_attribute("#top-search", "aria-expanded") == "true"
+        pg.keyboard.press("ArrowDown")
+        pg.keyboard.press("Enter")
+        assert pg.evaluate("[S.page, S.selected]") == ["dashboard", "acc10"]
+        assert res.is_hidden() and pg.input_value("#top-search") == ""
+        # cài đặt, gõ không dấu: mở trang Cài đặt và đưa dòng đó vào tầm nhìn
+        pg.fill("#top-search", "nghi it nhat")
+        assert "Cài đặt" in groups() and "Nghỉ ít nhất giữa 2 lượt search" in titles(), titles()
+        res.locator(".sr-item", has_text="Nghỉ ít nhất giữa 2 lượt search").click()
+        assert pg.evaluate("S.page") == "settings"
+        row = pg.locator(".set-row", has_text="Nghỉ ít nhất giữa 2 lượt search")
+        assert row.is_visible() and "search-hit" in row.get_attribute("class")
+        # FAQ: câu hỏi trong mục đang gập -> mở mục và cuộn tới câu đó
+        pg.fill("#top-search", "phien dang nhap het han")
+        assert "Hướng dẫn & FAQ" in groups() and "Phiên đăng nhập hết hạn" in titles(), titles()
+        pg.keyboard.press("Enter")
+        assert pg.evaluate("S.page") == "guide"
+        pg.wait_for_timeout(700)
+        dt = pg.locator("#guide dt", has_text="Phiên đăng nhập hết hạn")
+        assert dt.is_visible() and "search-hit" in dt.get_attribute("class")
+        # trang + nhật ký: kết quả nhật ký mở trang Nhật ký đã lọc sẵn
+        pg.evaluate("window.onEvents([{type: 'log', name: 'acc3', time: '09:00:00', msg: 'Visual Search: xong'}])")
+        pg.fill("#top-search", "visual")
+        assert "Nhật ký" in groups()
+        assert "1 dòng khớp" in res.locator(".sr-item", has_text="Tìm trong nhật ký").inner_text()
+        res.locator(".sr-item", has_text="Tìm trong nhật ký").click()
+        assert pg.evaluate("S.page") == "log" and pg.input_value("#log-search") == "visual"
+        pg.fill("#top-search", "lich su")
+        assert groups()[0] == "Trang" and titles()[0] == "Lịch sử"
+        pg.fill("#top-search", "zzzz")
+        assert "Không tìm thấy kết quả" in res.inner_text()
         pg.press("#top-search", "Escape")
-        assert pg.input_value("#top-search") == "" and pg.locator(rows).count() == 12
+        assert pg.input_value("#top-search") == "" and res.is_hidden()
+        pg.evaluate("go('profiles')")
         kpis = pg.locator("#profile-kpis .kpi")
         assert kpis.count() == 4
         assert "0 / 12" in kpis.nth(2).inner_text()
