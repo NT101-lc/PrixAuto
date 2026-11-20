@@ -6,6 +6,7 @@ Chỉ gửi tới api.telegram.org và discord.com; địa chỉ được dựng
 Lỗi gửi chỉ được ghi vào nhật ký, không bao giờ làm hỏng lượt chạy.
 """
 
+import html
 import json
 import re
 import time
@@ -57,14 +58,48 @@ def clean_discord_webhook(value) -> str:
 
 
 # ---------------------------------------------------------------- nội dung tin
+# Tin được dựng một lần với dấu chữ đậm B0...B1, rồi mỗi kênh tự đổi sang định dạng của mình:
+# Telegram dùng HTML (<b>), Discord dùng markdown (**). Chữ lấy từ dữ liệu (tên tài khoản, tên việc) được escape.
+B0, B1 = "\x02", "\x03"
+
+
+def _b(s) -> str:
+    return f"{B0}{s}{B1}"
+
+
+def _clean(s) -> str:
+    """Bỏ dấu định dạng lỡ có trong dữ liệu (tên tài khoản...), để không mở / đóng chữ đậm sai chỗ."""
+    return str(s).replace(B0, "").replace(B1, "")
+
+
+def plain(text: str) -> str:
+    return text.replace(B0, "").replace(B1, "")
+
+
+def to_html(text: str) -> str:
+    return html.escape(text, quote=False).replace(B0, "<b>").replace(B1, "</b>")
+
+
+# mọi dòng đều mở đầu bằng emoji nên không cần escape "#", ">" (chỉ có nghĩa ở đầu dòng)
+_MD_SPECIAL = re.compile(r"([\\*_~`|\[\]])")
+
+
+def to_markdown(text: str) -> str:
+    return _MD_SPECIAL.sub(r"\\\1", text).replace(B0, "**").replace(B1, "**")
+
+
 def _texts(lang: str) -> dict:
     if lang == "en":
-        return {"pts": "points", "total": "Total gained", "stopped": "stopped", "unknown": "did not finish",
-                "test": "Test message: notifications are working.", "today": "today", "other": "Other",
-                "missing": "Not done", "more": "and # more", "streak": "Daily streak # days", "stamps": "Stamps"}
-    return {"pts": "điểm", "total": "Tổng được", "stopped": "đã dừng", "unknown": "không chạy xong",
-            "test": "Tin nhắn thử: thông báo đã hoạt động.", "today": "hôm nay", "other": "Khác",
-            "missing": "Còn thiếu", "more": "và # việc khác", "streak": "Chuỗi # ngày", "stamps": "Stamp"}
+        return {"title": "PRIXAUTO REPORT", "pts": "points", "total": "Total gained", "unknown": "Did not finish",
+                "test": "Test message: notifications are working.", "today": "Today", "other": "Other",
+                "missing": "Not done", "more": "and # more", "streak": "Daily streak # days", "stamps": "Stamps",
+                "points": "Points", "note": "Note", "done": "Bot finished every account!",
+                "states": {"Hoàn thành": "Done", "Đã dừng": "Stopped", "Lỗi": "Error",
+                           "Chưa đăng nhập": "Not signed in"}}
+    return {"title": "BÁO CÁO PRIXAUTO", "pts": "điểm", "total": "Tổng được", "unknown": "Không chạy xong",
+            "test": "Tin nhắn thử: thông báo đã hoạt động.", "today": "Hôm nay", "other": "Khác",
+            "missing": "Còn thiếu", "more": "và # việc khác", "streak": "Chuỗi # ngày", "stamps": "Stamp",
+            "points": "Điểm", "note": "Ghi chú", "done": "Bot đã chạy xong tất cả tài khoản!", "states": {}}
 
 
 # dòng "Your activity" trùng với nhóm đã tóm tắt ở trên (Search, Daily Set): không lặp lại
@@ -88,56 +123,59 @@ def _task_lines(r: dict, t: dict) -> list:
     pts = r.get("points")
     if isinstance(r.get("today"), int) and not (isinstance(pts, int) and isinstance(r.get("start"), int)
                                                 and pts - r["start"] == r["today"]):
-        out.append(f"{t['today']} +{r['today']:,} {t['pts']}")
-    search = [f"{x.get('title', '').replace('Search ', '')} {_num(x.get('progress'))}/{_num(x.get('max'))}"
+        out.append(f"📈 {t['today']}: +{r['today']:,} {t['pts']}")  # khác số được ở lượt này (đã chạy lượt khác trong ngày)
+    search = [f"{_clean(x.get('title', '')).replace('Search ', '')} {_num(x.get('progress'))}/{_num(x.get('max'))}"
               for x in rows if x.get("group") == "Tìm kiếm"]
     if search:
-        out.append("Search: " + " · ".join(search))
+        out.append("🔎 Search: " + " · ".join(search))
     groups = []
     for g in ("Daily Set", "Keep earning", "Quests"):
         gr = [x for x in rows if x.get("group") == g]
         if gr:
             groups.append(f"{g} {sum(1 for x in gr if x.get('done'))}/{len(gr)}")
     if groups:
-        out.append(" · ".join(groups))
+        out.append("📅 " + " · ".join(groups))
     other = []
     for x in rows:
-        title = str(x.get("title") or "")
+        title = _clean(x.get("title") or "")
         if x.get("group") not in ("Hoạt động", "Task thêm") or _SKIP_ACTIVITY.match(title):
             continue
         title = _short(title)[:40]
         p, m = _num(x.get("progress")), _num(x.get("max"))
         other.append(f"{title} {'✓' if x.get('done') else '✗'}" if m <= 1 else f"{title} {p}/{m}")
     if other:
-        out.append(f"{t['other']}: " + " · ".join(other))
+        out.append(f"🧩 {t['other']}: " + " · ".join(other))
     missing = []
     for x in rows:
         if x.get("done") or x.get("group") == "Tìm kiếm" and _num(x.get("max")) == 0:
             continue
-        title = _short(str(x.get("title") or ""))
+        title = _short(_clean(x.get("title") or ""))
         title = title if len(title) <= 40 else title[:39] + "…"
         m = _num(x.get("max"))
         missing.append(f"{title} {_num(x.get('progress'))}/{m}" if m > 1 else title)
     if missing:
         extra = len(missing) - MISSING_MAX
-        out.append(f"{t['missing']}: " + "; ".join(missing[:MISSING_MAX])
+        out.append(f"⚠️ {t['missing']}: " + "; ".join(missing[:MISSING_MAX])
                    + (f"; {t['more'].replace('#', str(extra))}" if extra > 0 else ""))
     st = r.get("streak") if isinstance(r.get("streak"), dict) else {}
     bits = []
     if _num(st.get("daily_streak")):
-        bits.append(t["streak"].replace("#", str(st["daily_streak"])))
+        bits.append("🔥 " + t["streak"].replace("#", str(st["daily_streak"])))
     stamps = st.get("stamps") if isinstance(st.get("stamps"), dict) else {}
     if _num(stamps.get("max")):
-        bits.append(f"{t['stamps']} {_num(stamps.get('progress'))}/{stamps['max']}")
+        bits.append(f"🎟 {t['stamps']} {_num(stamps.get('progress'))}/{stamps['max']}")
     if bits:
         out.append(" · ".join(bits))
     return out
 
 
-def summary(results: dict, mode: str, lang: str = "vi", now=None):
-    """Tin tóm tắt một lượt chạy, hoặc None nếu không cần gửi.
+_GAIN_PREFIX = re.compile(r"^\+[\d,.]+\s*(·\s*)?")  # "+226 · ..." ở đầu tiến độ: số điểm đã có ở dòng Điểm
 
-    results: {tên tài khoản: {"state", "progress", "start", "points"}} (trạng thái cuối mỗi tài khoản)."""
+
+def summary(results: dict, mode: str, lang: str = "vi", now=None):
+    """Tin tóm tắt một lượt chạy (có dấu chữ đậm, xem plain / to_html / to_markdown), hoặc None nếu không cần gửi.
+
+    results: {tên tài khoản: trạng thái cuối, các khóa trong KEPT}."""
     if mode not in ("always", "errors") or not results:
         return None
     if all(r.get("state") in STOP_STATES for r in results.values()):
@@ -146,33 +184,36 @@ def summary(results: dict, mode: str, lang: str = "vi", now=None):
     if mode == "errors" and not bad:
         return None
     t = _texts(lang)
-    lines = [f"{APP_NAME} · {time.strftime('%d/%m %H:%M', now or time.localtime())}"]
+    lines = [f"🤖 {_b(t['title'])}", f"⏰ {time.strftime('%H:%M · %d/%m/%Y', now or time.localtime())}", ""]
     total = 0
     for name in sorted(results, key=str.lower):
         r = results[name]
-        state, progress = r.get("state") or "", str(r.get("progress") or "").strip()
-        pts = r.get("points")
-        if isinstance(pts, int) and isinstance(r.get("start"), int):
-            total += max(0, pts - r["start"])
+        state = _clean(r.get("state") or "")
+        progress = _clean(r.get("progress") or "").strip()
+        pts, start = r.get("points"), r.get("start")
         icon = "✅" if state in OK_STATES else "⏹" if state in STOP_STATES else "❌"
-        if state in OK_STATES:
-            detail = progress or "OK"
-        elif state in STOP_STATES:
-            detail = t["stopped"]
-        else:
-            detail = " · ".join(x for x in (state if state != "Lỗi" else "", progress) if x) or t["unknown"]
-        tail = f" · {pts:,} {t['pts']}" if isinstance(pts, int) else ""
-        lines.append(f"{icon} {name}: {detail}{tail}")
+        lines.append(f"👤 {_b(_clean(name))} · {icon} {t['states'].get(state, state) or t['unknown']}")
+        if isinstance(pts, int):
+            if isinstance(start, int):
+                gain = pts - start
+                total += max(0, gain)
+                lines.append(f"💎 {t['points']}: {start:,} → {_b(f'{pts:,}')} ({'+' if gain >= 0 else ''}{gain:,})")
+            else:
+                lines.append(f"💎 {t['points']}: {_b(f'{pts:,}')}")
+        note = _GAIN_PREFIX.sub("", progress)
+        if note and state not in STOP_STATES:
+            lines.append(f"📝 {t['note']}: {note}")
         if state not in STOP_STATES:
-            lines += [f"   {x}" for x in _task_lines(r, t)]
+            lines += _task_lines(r, t)
         lines.append("")
     if total:
-        lines.append(f"{t['total']}: +{total:,} {t['pts']}")
+        lines.append(f"💰 {t['total']}: {_b(f'+{total:,} ' + t['pts'])}")
+    lines.append(f"🚀 {t['done']}")
     return "\n".join(lines)
 
 
 def test_text(lang: str = "vi") -> str:
-    return f"{APP_NAME}: {_texts(lang)['test']}"
+    return f"🤖 {_b(APP_NAME)}\n✅ {_texts(lang)['test']}"
 
 
 # ---------------------------------------------------------------- gửi
@@ -213,19 +254,24 @@ def _why(e: Exception) -> str:
 
 
 def send(text: str, chans: dict, opener=urllib.request.urlopen) -> dict:
-    """Gửi text tới các kênh. Trả {kênh: "" nếu được, hoặc lý do lỗi}."""
+    """Gửi text (có dấu chữ đậm của summary) tới các kênh. Trả {kênh: "" nếu được, hoặc lý do lỗi}."""
     out = {}
     if "telegram" in chans:
         token, chat = chans["telegram"]
         try:
-            _post(f"https://api.telegram.org/bot{token}/sendMessage",
-                  {"chat_id": chat, "text": text[:TG_MAX], "disable_web_page_preview": True}, opener)
+            body = to_html(text)
+            payload = {"chat_id": chat, "text": body, "parse_mode": "HTML", "disable_web_page_preview": True}
+            if len(body) > TG_MAX:  # cắt HTML có thể làm hỏng thẻ: tin quá dài thì gửi chữ thường
+                payload = {"chat_id": chat, "text": plain(text)[:TG_MAX], "disable_web_page_preview": True}
+            _post(f"https://api.telegram.org/bot{token}/sendMessage", payload, opener)
             out["telegram"] = ""
         except Exception as e:  # noqa: BLE001 (gửi thông báo không được làm hỏng lượt chạy)
             out["telegram"] = _why(e)
     if "discord" in chans:
         try:
-            _post(chans["discord"], {"content": text[:DC_MAX], "allowed_mentions": {"parse": []}}, opener)
+            body = to_markdown(text)
+            body = body if len(body) <= DC_MAX else plain(text)[:DC_MAX]
+            _post(chans["discord"], {"content": body, "allowed_mentions": {"parse": []}}, opener)
             out["discord"] = ""
         except Exception as e:  # noqa: BLE001
             out["discord"] = _why(e)

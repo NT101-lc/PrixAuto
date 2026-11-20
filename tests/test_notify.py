@@ -58,12 +58,24 @@ BAD = {"state": "Lỗi", "progress": "+180 · Search Mobile không được cộ
 STOP = {"state": "Đã dừng", "progress": ""}
 
 
+def summ(*a, **k):
+    text = notify.summary(*a, **k)
+    return text if text is None else notify.plain(text)
+
+
 def test_summary_always_lists_every_account_and_total():
-    text = notify.summary({"namanh": BAD, "mkvison": OK}, "always")
-    lines = text.splitlines()
-    assert lines[1] == "✅ mkvison: +226 · 3,264 điểm"  # xếp theo tên
-    assert lines[3] == "❌ namanh: +180 · Search Mobile không được cộng điểm · 5,180 điểm"
-    assert lines[-1] == "Tổng được: +406 điểm"
+    lines = summ({"namanh": BAD, "mkvison": OK}, "always").splitlines()
+    assert lines[0] == "🤖 BÁO CÁO PRIXAUTO" and lines[1].startswith("⏰ ") and lines[2] == ""
+    assert lines[3:10] == [
+        "👤 mkvison · ✅ Hoàn thành",  # xếp theo tên
+        "💎 Điểm: 3,038 → 3,264 (+226)",  # "+226" của tiến độ đã nằm ở dòng Điểm, không thêm Ghi chú
+        "",
+        "👤 namanh · ❌ Lỗi",
+        "💎 Điểm: 5,000 → 5,180 (+180)",
+        "📝 Ghi chú: Search Mobile không được cộng điểm",
+        "",
+    ]
+    assert lines[-2:] == ["💰 Tổng được: +406 điểm", "🚀 Bot đã chạy xong tất cả tài khoản!"]
 
 
 TASKS = [
@@ -84,17 +96,20 @@ TASKS = [
 
 def test_summary_lists_what_was_done():
     r = {**OK, "today": 300, "tasks": TASKS, "streak": {"daily_streak": 40, "stamps": {"progress": 3, "max": 12}}}
-    lines = notify.summary({"a": r}, "always").splitlines()
-    assert lines[2:] == [
-        "   hôm nay +300 điểm",  # khác số được ở lượt này (đã chạy một lượt khác trong ngày)
-        "   Search: PC 87/90 · Mobile 60/60",
-        "   Daily Set 3/3 · Keep earning 0/1 · Quests 0/1",
-        "   Khác: Check-in ✓ · Visual Search ✗ · Read to Earn 30/30 · Browse 0/30",
-        "   Còn thiếu: Search PC 87/90; Quote of the day 0/5; Rewards App weekly Exclusive Quest with… 1/8; "
+    lines = summ({"a": r}, "always").splitlines()
+    assert lines[3:] == [
+        "👤 a · ✅ Hoàn thành",
+        "💎 Điểm: 3,038 → 3,264 (+226)",
+        "📈 Hôm nay: +300 điểm",  # khác số được ở lượt này (đã chạy một lượt khác trong ngày)
+        "🔎 Search: PC 87/90 · Mobile 60/60",
+        "📅 Daily Set 3/3 · Keep earning 0/1 · Quests 0/1",
+        "🧩 Khác: Check-in ✓ · Visual Search ✗ · Read to Earn 30/30 · Browse 0/30",
+        "⚠️ Còn thiếu: Search PC 87/90; Quote of the day 0/5; Rewards App weekly Exclusive Quest with… 1/8; "
         "Visual Search; và 1 việc khác",
-        "   Chuỗi 40 ngày · Stamp 3/12",
+        "🔥 Chuỗi 40 ngày · 🎟 Stamp 3/12",
         "",
-        "Tổng được: +226 điểm",
+        "💰 Tổng được: +226 điểm",
+        "🚀 Bot đã chạy xong tất cả tài khoản!",
     ]
 
 
@@ -114,15 +129,24 @@ def test_summary_modes():
 
 
 def test_summary_not_logged_in_and_unfinished_count_as_errors():
-    text = notify.summary({"a": {"state": "Chưa đăng nhập", "progress": "Bấm Đăng nhập"}, "b": {}}, "errors")
-    assert "❌ a: Chưa đăng nhập · Bấm Đăng nhập" in text
-    assert "❌ b: không chạy xong" in text
+    text = summ({"a": {"state": "Chưa đăng nhập", "progress": "Bấm Đăng nhập"}, "b": {}}, "errors")
+    assert "👤 a · ❌ Chưa đăng nhập\n📝 Ghi chú: Bấm Đăng nhập" in text
+    assert "👤 b · ❌ Không chạy xong" in text
     assert "Tổng" not in text
 
 
 def test_summary_english():
-    text = notify.summary({"a": OK, "b": STOP}, "always", "en")
-    assert "3,264 points" in text and "⏹ b: stopped" in text and "Total gained: +226 points" in text
+    text = summ({"a": OK, "b": STOP}, "always", "en")
+    assert "👤 a · ✅ Done" in text and "👤 b · ⏹ Stopped" in text
+    assert "💎 Points: 3,038 → 3,264 (+226)" in text and "Total gained: +226 points" in text
+
+
+def test_summary_formats_per_channel_and_escapes_names():
+    text = notify.summary({"<b>x</b>*_\x02": OK}, "always")
+    tg, dc = notify.to_html(text), notify.to_markdown(text)
+    assert "<b>BÁO CÁO PRIXAUTO</b>" in tg and "👤 <b>&lt;b&gt;x&lt;/b&gt;*_</b>" in tg  # tên không thành thẻ HTML
+    assert "**BÁO CÁO PRIXAUTO**" in dc and r"👤 **<b>x</b>\*\_**" in dc  # không phá chữ đậm của Discord
+    assert "\x02" not in tg and "\x03" not in dc
 
 
 # ---------------------------------------------------------------- gửi
@@ -149,8 +173,23 @@ def test_send_builds_requests():
     (tg_url, tg, ua, timeout), (dc_url, dc, _, _) = seen
     assert tg_url == f"https://api.telegram.org/bot{TOKEN}/sendMessage" and tg["chat_id"] == "42"
     assert len(tg["text"]) == notify.TG_MAX and timeout == notify.TIMEOUT
+    assert "parse_mode" not in tg  # quá dài: gửi chữ thường, không cắt ngang thẻ HTML
     assert ua.startswith("PrixAuto/")  # Discord chặn User-Agent mặc định của urllib
     assert dc_url == HOOK and len(dc["content"]) == notify.DC_MAX and dc["allowed_mentions"] == {"parse": []}
+
+
+def test_send_uses_html_for_telegram_and_markdown_for_discord():
+    seen = []
+
+    def opener(req, timeout):
+        seen.append(json.loads(req.data))
+        return FakeResp()
+
+    text = notify.summary({"a_b": OK}, "always")
+    notify.send(text, {"telegram": (TOKEN, "42"), "discord": HOOK}, opener)
+    tg, dc = seen
+    assert tg["parse_mode"] == "HTML" and "<b>a_b</b>" in tg["text"]
+    assert r"**a\_b**" in dc["content"]
 
 
 def test_send_errors_never_leak_secrets():
@@ -226,7 +265,9 @@ def _runner(monkeypatch, settings, action="run"):
 def test_runner_sends_one_summary_after_all_accounts(data_dir, monkeypatch):
     sent, order = _runner(monkeypatch, {})
     assert len(sent) == 1
-    assert "✅ a: +30 · 130 điểm" in sent[0] and "❌ b: +30 · lỗi · 130 điểm" in sent[0] and "+60" in sent[0]
+    text = notify.plain(sent[0])
+    assert "👤 a · ✅ Hoàn thành\n💎 Điểm: 100 → 130 (+30)\n\n" in text
+    assert "👤 b · ❌ Lỗi\n💎 Điểm: 100 → 130 (+30)\n📝 Ghi chú: lỗi" in text and "+60 điểm" in text
     # gửi trước khi báo xong tài khoản cuối: lệnh --run-all không thoát trước khi tin đi
     assert order.index(("send", None)) < max(i for i, e in enumerate(order) if e[0] == "done")
     assert ("log", "Đã gửi thông báo qua Discord") in order
