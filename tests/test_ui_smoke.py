@@ -71,6 +71,16 @@ def boot_data():
     }
 
 
+def recent_history(boot):
+    """Thêm 1 ngày gần đây vào lịch sử mẫu: các ngày cố định của fixture rơi ra ngoài khoảng 30 ngày theo thời gian,
+    khi đó biểu đồ "Nguồn điểm 30 ngày" không có số liệu để vẽ."""
+    from datetime import date, timedelta
+    day = (date.today() - timedelta(days=2)).isoformat()
+    for h in boot["history"].values():
+        h[day] = {"available": 3417, "pc": 90, "mobile": 60, "offers": 20}
+    return boot
+
+
 SHOT = None  # đặt đường dẫn để chụp ảnh khi xem giao diện bằng tay
 
 # API giả có trạng thái: lưu cài đặt thật sự (merge), xóa tài khoản thật sự, ghi lại mọi lời gọi vào window.__calls.
@@ -139,7 +149,7 @@ def open_row_action(pg, act):
 
 
 def test_pages_render_without_errors(server):
-    boot = boot_data()
+    boot = recent_history(boot_data())
     boot["settings"]["fun_mode"] = True  # Văn phòng, Cyberpunk, icon 3D, thẻ đóng dấu chỉ có ở chế độ vui
     mock = ("window.__B = " + json.dumps(boot) + ";"
             "window.pywebview = { api: new Proxy({}, { get: (_, k) => async () => k === 'bootstrap' ? window.__B"
@@ -215,7 +225,7 @@ def test_pages_render_without_errors(server):
         assert pg.locator("#kpis .kpi").count() == 4
         assert pg.locator("#heatmap .hm").count() == 84
         assert not pg.locator("#compare-panel").is_visible()
-        pg.wait_for_function("document.querySelector('#chart-sources .apexcharts-canvas')", timeout=5000)
+        assert poll(pg, "!!document.querySelector('#chart-sources .apexcharts-canvas')")
         k = pg.evaluate("""computeKpis({
             "2026-09-14": {today: 100}, "2026-09-24": {today: 500}, "2026-10-13": {today: 999},
             "2026-10-18": {today: 100, pc: 90, pc_max: 90, mobile: 60, mobile_max: 60},
@@ -605,7 +615,7 @@ def test_neutral_palette_phase1(server, fun):
 
 def test_fun_off_default_look(server):
     """TC-2.1, TC-2.2, TC-3.1, TC-5.1: tắt chế độ vui (mặc định) = giao diện gọn, không Văn phòng / Cyberpunk / ảnh 3D."""
-    boot = boot_data()
+    boot = recent_history(boot_data())
     boot["settings"].update(fun_mode=False, theme="cyberpunk")  # theme đã lưu là cyberpunk
     with app_page(server, boot, {"width": 1400, "height": 1000}) as (pg, errors):
         assert poll(pg, "document.querySelectorAll('.chip').length === 1")
