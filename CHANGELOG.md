@@ -6,6 +6,15 @@ rỗng) thì test và workflow phát hành đều báo lỗi, không có bản p
 
 Viết cho người dùng: bản mới làm được gì, sửa lỗi gì, người dùng cần làm gì. Không cần liệt kê tên file hay chi tiết code.
 
+## 1.9.0 - 2026-11-20
+- **Giao diện mới**, gọn và dễ nhìn hơn.
+- **Tìm mọi thứ bằng `Ctrl K`**: tài khoản, cài đặt, hướng dẫn, nhật ký. Ô tìm còn trống thì gợi ý những thứ bạn hay dùng.
+- **Tự làm mới điểm** khi mở app và sau mỗi lượt chạy, không phải bấm **Làm mới** nữa.
+- **Hẹn giờ chạy mỗi ngày ngay trong app**: **Cài đặt > Chạy tự động mỗi ngày**. Đã tự tạo lịch trong Task Scheduler
+  theo cách cũ thì xóa lịch cũ đi để không chạy hai lần.
+- **Thông báo Telegram / Discord** dễ đọc hơn.
+- Sửa vài lỗi hiển thị nhỏ.
+
 ## 1.8.3 - 2026-11-20
 - Mới: **báo kết quả qua Telegram hoặc Discord** sau mỗi lượt chạy. Mỗi tài khoản có một đoạn: số điểm hiện có, điểm
   được hôm nay, tiến độ Search PC / Mobile, Daily Set, Keep earning, Quests, các việc còn thiếu và chuỗi streak.
