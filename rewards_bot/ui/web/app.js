@@ -89,7 +89,7 @@ window.addEventListener("pywebviewready", async () => {
   window.Office?.init();
   applyFun(false);  // đặt chế độ vui + giao diện trước khi vẽ lần đầu
   applyLanguage();
-  renderAll();
+  renderAll(false);
   if (!S.settings.onboarded) Welcome.open(1);
   Update.auto();
 });
@@ -496,7 +496,7 @@ function go(page) {
   $$(".view").forEach((p) => (p.hidden = p.id !== "page-" + page));
   if (page === "log") S.unreadErr = 0;
   if (page === "dashboard") Charts.reset();  // vẽ lại theo kích thước thật sau khi trang hiện ra
-  renderAll();
+  renderAll(false);  // mở trang Cài đặt: hiện giá trị đã lưu
   window.scrollTo(0, 0);
 }
 
@@ -511,13 +511,13 @@ async function start(names, action) {
           check: "Đang kiểm tra (không search)" }[action]);
 }
 
-function renderAll() {
+function renderAll(keepEdits = true) {
   renderSide();
   if (S.page === "dashboard") renderDashboard();
   if (S.page === "profiles") renderProfiles();
   if (S.page === "log") renderLog();
   if (S.page === "history") renderHistory();
-  if (S.page === "settings") renderSettings();
+  if (S.page === "settings") renderSettings(keepEdits);
   window.Office?.render();  // tự dừng vẽ khi không ở trang Văn phòng
   renderLogBadge();
 }
@@ -1419,7 +1419,11 @@ function settingRow(f) {
     <input type="number" class="form-control" id="set-${k}" data-key="${k}" min="${min}" max="${max}" value="${esc(v[k] ?? "")}">
     <span class="input-group-text">${unit}</span></div></div></div>`;
 }
-function renderSettings() {
+// ô người dùng có thể đang sửa dở (chưa bấm Lưu)
+const SETTING_INPUTS = "#settings-form input, #settings-form select, #notify-card input, #notify-card select";
+// keep: vẽ lại (đổi ngôn ngữ, chế độ vui...) mà giữ những gì đang nhập dở thay vì trả về giá trị đã lưu
+function renderSettings(keep = false) {
+  const kept = keep ? $$(SETTING_INPUTS).map((e) => [e.id, e.type === "checkbox" ? e.checked : e.value]) : [];
   $("#settings-form").innerHTML = SETTING_GROUPS.map(([title, ic, rows]) =>
     `<div class="card"><div class="card-header"><h3 class="card-title"><i class="ti ${ic} me-2"></i>${title}</h3></div>
       <div class="set-list">${rows.map(settingRow).join("")}</div></div>`).join("");
@@ -1432,6 +1436,10 @@ function renderSettings() {
   const app = S.app || {};
   $("#app-version").textContent = `Phiên bản ${app.version || "?"}${app.frozen ? "" : " (mã nguồn)"}`;
   $("#about-data").textContent = app.data_dir || "data";
+  for (const [id, v] of kept) {
+    const e = id && document.getElementById(id);
+    if (e) e[typeof v === "boolean" ? "checked" : "value"] = v;
+  }
 }
 async function saveSettingsForm() {
   const partial = { browser_channel: $("#set-browser").value };
@@ -1444,8 +1452,12 @@ async function saveSettingsForm() {
     partial[i.dataset.key] = v;
   }
   for (const c of $$("#settings-form input[data-sw]")) partial[c.dataset.sw] = c.checked;
-  const ok = await saveSettings(partial);
+  const nt = Notify.collect();  // nút Lưu chung cũng lưu thẻ Thông báo, không bỏ rơi token vừa nhập
+  if (!nt) return false;
+  const ok = await saveSettings({ ...partial, ...nt });
+  if (ok && !(await Notify.saveChannels())) return false;  // giữ nguyên ô đã nhập để sửa lại
   renderSettings();
+  Notify.hint();
   if (ok) toast("Đã lưu cài đặt");
   return ok;
 }
@@ -1462,21 +1474,35 @@ const Notify = {
     $("#nt-unsupported").hidden = n.supported !== false;
     for (const id of ["#nt-tg-token", "#nt-dc", "#nt-save", "#nt-test"]) $(id).disabled = n.supported === false;
   },
-  async save(clear = []) {
+  // cài đặt thường của thẻ (chế độ, Chat ID), hoặc null nếu Chat ID sai dạng
+  collect() {
     const chat = $("#nt-tg-chat").value.trim();
     if (chat && !/^(-?\d{1,20}|@[A-Za-z0-9_]{5,32})$/.test(chat)) {  // cùng quy tắc với SETTING_SCHEMA của webapp.py
-      showError("Chat ID Telegram phải là một số hoặc @tên_kênh"); $("#nt-tg-chat").focus(); return false;
+      showError("Chat ID Telegram phải là một số hoặc @tên_kênh"); $("#nt-tg-chat").focus(); return null;
     }
-    const ok = await saveSettings({ notify_mode: $("#nt-mode").value, telegram_chat_id: chat });
-    if (!ok) { this.render(); return false; }
-    const r = await api().save_notify_channels({ telegram_token: $("#nt-tg-token").value.trim(),
-      discord_webhook: $("#nt-dc").value.trim(), clear });
+    return { notify_mode: $("#nt-mode").value, telegram_chat_id: chat };
+  },
+  // lưu token / webhook vừa nhập (ô trống = giữ nguyên cái đã lưu)
+  async saveChannels(clear = []) {
+    const tg = $("#nt-tg-token").value.trim(), dc = $("#nt-dc").value.trim();
+    if (!tg && !dc && !clear.length) return true;
+    const r = await api().save_notify_channels({ telegram_token: tg, discord_webhook: dc, clear });
     if (r.notify) S.notify = r.notify;
     if (!r.ok) { showError(r.error); return false; }
+    return true;
+  },
+  hint() {
+    const n = S.notify || {};
+    $("#nt-result").textContent = S.settings.notify_mode !== "off" && !n.discord && !(n.telegram && S.settings.telegram_chat_id)
+      ? "Chưa có kênh nào để gửi: nhập token Telegram kèm Chat ID, hoặc webhook Discord." : "";
+  },
+  async save(clear = []) {
+    const p = this.collect();
+    if (!p) return false;
+    if (!(await saveSettings(p))) { this.render(); return false; }
+    if (!(await this.saveChannels(clear))) return false;
     this.render();
-    if (S.settings.notify_mode !== "off" && !S.notify.discord && !(S.notify.telegram && S.settings.telegram_chat_id))
-      $("#nt-result").textContent = "Chưa có kênh nào để gửi: nhập token Telegram kèm Chat ID, hoặc webhook Discord.";
-    else $("#nt-result").textContent = "";
+    this.hint();
     toast("Đã lưu cài đặt thông báo");
     return true;
   },

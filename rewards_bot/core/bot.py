@@ -1002,6 +1002,8 @@ class RewardsBot:
                 self.sleep(5, 10)
             else:
                 break
+        # chỉ báo lỗi khi đã hết lượt thử mà Rewards vẫn chưa tính (Bing báo lỗi từng lượt là chuyện thường)
+        self.log("Lỗi: Visual Search chưa được Rewards ghi nhận hôm nay, lượt chạy sau sẽ thử lại")
 
     def _visual_credited(self, page: Page) -> "dict | None":
         """Points breakdown đã tính Visual Search hôm nay chưa (đọc lại trang Rewards).
@@ -1066,13 +1068,13 @@ class RewardsBot:
             raise
         except Exception as e:
             self.check_stop()
-            self.log(f"Lỗi: Visual Search: không mở được ô tải ảnh của Bing ({e})")
+            self.log(f"  Visual Search: không mở được ô tải ảnh của Bing ({e})")
             ctx.remove_listener("response", on_response)
             return False
         if not result:
             ctx.remove_listener("response", on_response)
             unable = page.locator("text=Unable to process this search").count() > 0
-            self.log("Lỗi: Visual Search: Bing " + ("báo 'Unable to process this search'" if unable
+            self.log("  Visual Search: Bing " + ("báo 'Unable to process this search'" if unable
                                                     else "không trả kết quả sau 45 giây"))
             return False
         self.log(f"  Visual Search: Bing đã tìm bằng ảnh ({result[:90]})")

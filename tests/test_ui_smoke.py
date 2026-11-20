@@ -916,6 +916,32 @@ def test_settings_groups_validation_history_and_log_search(server):
         assert not errors, errors
 
 
+def test_settings_keep_unsaved_edits_and_save_notify_card(server):
+    """Đổi ngôn ngữ trên trang Cài đặt không xóa những gì đang nhập dở; nút Lưu cài đặt chung lưu luôn thẻ Thông báo."""
+    boot = boot_data()
+    with app_page(server, boot, viewport={"width": 1320, "height": 900}) as (pg, errors):
+        pg.evaluate("go('settings')")
+        pg.fill("#set-stall_after", "9")
+        pg.select_option("#nt-mode", "errors")
+        pg.fill("#nt-tg-chat", "12345")
+        pg.fill("#nt-tg-token", "123456:abcdefghijklmnopqrstuvwxyzABCDEFGH")
+        pg.evaluate("setLanguage('en')")
+        assert pg.input_value("#set-stall_after") == "9" and pg.input_value("#nt-mode") == "errors"
+        assert pg.input_value("#nt-tg-token").startswith("123456:")
+        pg.click("#btn-save-settings")
+        assert poll(pg, "window.__calls.some((c) => c[0] === 'save_notify_channels')")
+        s = pg.evaluate("window.__B.settings")
+        assert (s["stall_after"], s["notify_mode"], s["telegram_chat_id"]) == (9, "errors", "12345")
+        sent = pg.evaluate("window.__calls.find((c) => c[0] === 'save_notify_channels')[1]")
+        assert sent["telegram_token"].startswith("123456:") and sent["discord_webhook"] == ""
+        assert pg.input_value("#nt-tg-token") == ""  # đã lưu thì không để token trong ô nhập
+        # rời trang rồi quay lại: hiện giá trị đã lưu
+        pg.fill("#set-stall_after", "12")
+        pg.evaluate("go('dashboard')"); pg.evaluate("go('settings')")
+        assert pg.input_value("#set-stall_after") == "9"
+        assert not errors, errors
+
+
 def test_accessibility_focus_ring_chart_labels_and_esc(server):
     """TC-9.1..9.3: dùng phím Tab thì phần tử đang focus có viền; mọi [role=img] có aria-label (biểu đồ có câu tóm tắt);
     Esc đóng mọi hộp thoại."""

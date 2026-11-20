@@ -263,6 +263,8 @@ def test_visual_search_checks_credit_before_retry(tmp_path, monkeypatch, credite
     assert len(tries) == uploads
     assert ("vẫn đã ghi nhận" in logs[-1]) == credited
     assert "thử lại với ảnh khác" not in " ".join(logs) if credited else True
+    # một dòng "Lỗi" duy nhất, và chỉ khi hết lượt thử mà Rewards vẫn chưa tính
+    assert [m for m in logs if m.startswith("Lỗi")] == ([] if credited else [logs[-1]])
 
 
 def test_missed_cards_are_retried_once():
