@@ -1630,11 +1630,42 @@ function renderSettingsNav() {
     return `<button type="button" class="settings-nav-item" data-target="${c.id}"><i class="${ic}" aria-hidden="true"></i><span>${esc(t.textContent.trim())}</span></button>`;
   }).join("");
   $$("#settings-nav button").forEach((b) => (b.onclick = () => {
-    $$("#settings-nav button").forEach((x) => x.removeAttribute("aria-current"));
-    b.setAttribute("aria-current", "true");
+    SettingsSpy.pin(b.dataset.target);  // thẻ cuối có thể không cuộn tới đỉnh được: giữ đúng mục vừa bấm
     document.getElementById(b.dataset.target).scrollIntoView({ behavior: "smooth", block: "start" });
   }));
+  SettingsSpy.update();
 }
+// mục con trang Cài đặt tự đánh dấu thẻ đang xem khi cuộn (scroll-spy): thẻ cuối cùng có đỉnh đã qua mép dưới thanh trên cùng
+const SettingsSpy = (() => {
+  let pinned = null, raf = 0;
+  const mark = (id) => $$("#settings-nav button").forEach((x) =>
+    x.dataset.target === id ? x.setAttribute("aria-current", "true") : x.removeAttribute("aria-current"));
+  function update() {
+    raf = 0;
+    if (S.page !== "settings" || !$("#settings-home #settings-cards")) return;  // khối cài đặt đang ở hộp thoại Văn phòng
+    if (pinned) { mark(pinned); return; }
+    const ids = $$("#settings-nav button").map((b) => b.dataset.target);
+    if (!ids.length) return;
+    const line = $(".topbar").getBoundingClientRect().bottom + 24;
+    let cur = ids[0];
+    for (const id of ids) {
+      const el = document.getElementById(id);
+      if (el && el.getBoundingClientRect().top <= line) cur = id;
+    }
+    // cuộn hết trang mà thẻ cuối chưa chạm đỉnh: chọn thẻ cuối đang nằm trong màn hình
+    if (innerHeight + scrollY >= document.documentElement.scrollHeight - 2) {
+      const vis = ids.filter((id) => document.getElementById(id)?.getBoundingClientRect().top < innerHeight - 40);
+      if (vis.length) cur = vis[vis.length - 1];
+    }
+    mark(cur);
+  }
+  const later = () => { if (!raf) raf = requestAnimationFrame(update); };
+  addEventListener("scroll", later, { passive: true });
+  addEventListener("resize", later, { passive: true });
+  // người dùng tự cuộn (chuột, chạm, phím) thì bỏ ghim mục vừa bấm
+  for (const ev of ["wheel", "touchstart", "keydown"]) addEventListener(ev, () => { if (pinned) { pinned = null; later(); } }, { passive: true });
+  return { update: later, pin(id) { pinned = id; mark(id); } };
+})();
 async function saveSettingsForm() {
   const partial = { browser_channel: $("#set-browser").value };
   for (const i of $$("#settings-form input[data-key]")) {

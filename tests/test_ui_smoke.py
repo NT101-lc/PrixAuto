@@ -943,6 +943,29 @@ def test_docker_shell_search_kpis_and_settings_nav(server):
         assert errors == []
 
 
+def test_settings_nav_follows_scroll(server):
+    """Cuộn trang Cài đặt thì mục con bên trái tự đánh dấu thẻ đang xem; cuộn hết trang thì là thẻ cuối."""
+    with app_page(server, boot_n(1), viewport={"width": 1360, "height": 800}) as (pg, errors):
+        pg.evaluate("go('settings')")
+        cur = "document.querySelector('#settings-nav [aria-current]')?.dataset.target"
+        items = pg.evaluate("[...document.querySelectorAll('#settings-nav button')].map((b) => b.dataset.target)")
+        assert poll(pg, f"{cur} === {json.dumps(items[0])}")
+        for target in (items[3], "schedule-card", "notify-card"):
+            pg.evaluate(f"window.scrollTo(0, document.getElementById('{target}').getBoundingClientRect().top + scrollY - 60)")
+            assert poll(pg, f"{cur} === '{target}'"), (target, pg.evaluate(cur))
+        pg.evaluate("window.scrollTo(0, document.documentElement.scrollHeight)")
+        assert poll(pg, f"{cur} === {json.dumps(items[-1])}"), pg.evaluate(cur)
+        pg.evaluate("window.scrollTo(0, 0)")
+        assert poll(pg, f"{cur} === {json.dumps(items[0])}")
+        # bấm mục giữa: đánh dấu mục đó; cuộn bằng chuột thì lại đi theo vị trí cuộn
+        pg.click(f"#settings-nav button[data-target='{items[2]}']")
+        assert pg.evaluate(cur) == items[2]
+        pg.wait_for_timeout(800)
+        pg.mouse.move(900, 400); pg.mouse.wheel(0, 2500)
+        assert poll(pg, f"{cur} !== {json.dumps(items[2])}")
+        assert errors == []
+
+
 def test_schedule_card_turns_daily_run_on_and_off(server):
     """Cài đặt → Chạy tự động mỗi ngày: đọc lịch từ Windows, bật kèm giờ + đánh thức máy, báo trạng thái, tắt lại; EN dịch đủ."""
     with app_page(server, boot_n(1)) as (pg, errors):
