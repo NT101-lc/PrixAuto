@@ -56,6 +56,8 @@ DEFAULT_SETTINGS = {
     "browse_minutes": 30,
     "browse_auto_stop": True,  # Browse tự dừng khi Edge – Minutes không tăng sau 20 phút
     "check_updates": True,  # mở app (và mỗi 6 giờ) thì hỏi GitHub có tag phiên bản mới không
+    "auto_refresh_open": True,  # mở app: tự làm mới điểm các tài khoản chưa đọc điểm trong hôm nay
+    "auto_refresh_after_run": True,  # chạy xong 1 tài khoản: đợi vài phút rồi tự làm mới (Rewards cộng điểm trễ)
     # gửi tóm tắt mỗi lượt chạy qua Telegram / Discord: "off" / "always" / "errors" (chỉ khi có tài khoản lỗi).
     # Token bot Telegram và webhook Discord nằm trong secrets.json (mã hóa DPAPI), không nằm ở đây.
     "notify_mode": "off",

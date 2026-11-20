@@ -91,6 +91,7 @@ window.addEventListener("pywebviewready", async () => {
   applyLanguage();
   renderAll(false);
   if (!S.settings.onboarded) Welcome.open(1);
+  else AutoRefresh.onOpen();
   Update.auto();
 });
 
@@ -317,6 +318,7 @@ window.onEvents = (batch) => {
       dirty = true;
     } else if (e.type === "done") {
       S.running.delete(e.name); dirty = true;
+      AutoRefresh.onDone(e.name);
     } else if (e.type === "update") {
       Update.onEvent(e);
     }
@@ -497,6 +499,7 @@ async function start(names, action) {
   if (r.ok === false) { showError(r.error); return; }
   if (action === "login" && names?.length === 1) openLoginHelp(names[0]);
   r.running.forEach((n) => S.running.add(n));
+  AutoRefresh.started(names || S.profiles.map((p) => p.name), action);
   renderSide(); renderDashboard(); renderProfiles();
   toast({ run: "Bắt đầu chạy", everything: "Bắt đầu làm tất cả các việc", refresh: "Đang làm mới điểm", login: "Đã mở cửa sổ đăng nhập",
           check: "Đang kiểm tra (không search)" }[action]);
@@ -1240,6 +1243,57 @@ const Search = (() => {
   return { bind, find, suggest };
 })();
 
+// ===================================================================== tự làm mới điểm
+// Đỡ phải bấm Làm mới: (1) mở app thì đọc lại điểm các tài khoản chưa được đọc trong hôm nay; (2) chạy xong một tài
+// khoản thì đợi AFTER_RUN_MS rồi đọc lại (Rewards hay cộng điểm search trễ vài phút nên số đọc lúc vừa chạy xong thường
+// thiếu). Làm mới chạy ẩn, mỗi lúc tối đa max_parallel tài khoản (hàng đợi), bỏ qua tài khoản đang chạy.
+// Tài khoản chưa từng đọc được điểm (chưa đăng nhập) không tự làm mới khi mở app, để khỏi báo lỗi mỗi lần mở.
+const AutoRefresh = (() => {
+  const AFTER_RUN_MS = 3 * 60 * 1000;
+  const RUN_ACTIONS = new Set(["run", "everything"]);
+  const queue = [], active = new Set(), lastAction = {}, timers = {};
+  const pad = (n) => String(n).padStart(2, "0");
+  const todayDM = () => { const d = new Date(); return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}`; };  // "updated" = "HH:MM dd/mm"
+  const exists = (n) => S.profiles.some((p) => p.name === n);
+  const staleToday = (n) => { const u = st(n).updated; return !!u && !u.endsWith(todayDM()); };
+
+  async function pump() {
+    while (queue.length && active.size < Math.max(1, +S.settings.max_parallel || 1)) {
+      const n = queue.shift();
+      if (S.running.has(n) || !exists(n)) continue;
+      active.add(n);
+      const r = await api().start([n], "refresh");
+      if (r.ok === false) { active.delete(n); continue; }
+      r.running.forEach((x) => S.running.add(x));
+      renderSide();
+    }
+  }
+  function enqueue(names) {
+    for (const n of names) if (!queue.includes(n) && !active.has(n)) queue.push(n);
+    pump();
+  }
+  function onOpen() {
+    if (S.settings.auto_refresh_open === false) return;
+    const names = S.profiles.map((p) => p.name).filter((n) => !S.running.has(n) && staleToday(n));
+    if (names.length) { appLog("app", `Tự làm mới điểm ${names.length} tài khoản (chưa đọc trong hôm nay)`); enqueue(names); }
+  }
+  // gọi từ start(): nhớ tài khoản vừa bắt đầu việc gì, để lúc xong biết có phải một lượt chạy không
+  function started(names, action) {
+    for (const n of names) { lastAction[n] = action; clearTimeout(timers[n]); delete timers[n]; }  // chạy lại: bỏ lần tự làm mới đang chờ
+  }
+  function onDone(name) {
+    if (active.delete(name)) { pump(); return; }  // xong một lượt tự làm mới
+    const was = lastAction[name];
+    delete lastAction[name];
+    if (!RUN_ACTIONS.has(was) || S.settings.auto_refresh_after_run === false) return;
+    clearTimeout(timers[name]);
+    timers[name] = setTimeout(() => { delete timers[name]; if (!S.running.has(name)) enqueue([name]); }, AFTER_RUN_MS);
+  }
+  return { onOpen, started, onDone, _state: () => ({ queue: [...queue], active: [...active], timers: Object.keys(timers) }) };
+})();
+// dòng nhật ký do app ghi (không qua bot), hiện như mọi dòng khác
+function appLog(name, msg) { window.onEvents([{ type: "log", name, msg, time: new Date().toTimeString().slice(0, 8) }]); }
+
 // 4 ô tóm tắt đầu trang Tài khoản (như dải CPU / RAM ở trang Containers của Docker Desktop)
 function renderProfileKpis() {
   const box = $("#profile-kpis");
@@ -1574,6 +1628,10 @@ const SETTING_GROUPS = [
     { sw: "bypass_proxy", label: "Không đi qua proxy hệ thống", hint: "Chặn proxy chen giữa. Tắt nếu mạng của bạn bắt buộc đi qua proxy." },
   ]],
   ["Dữ liệu", "ti-database", [
+    { sw: "auto_refresh_open", label: "Tự làm mới điểm khi mở app",
+      hint: "Mở app là tự đọc lại điểm của các tài khoản chưa được đọc trong hôm nay. Chạy ẩn, không mở cửa sổ." },
+    { sw: "auto_refresh_after_run", label: "Tự làm mới sau khi chạy xong",
+      hint: "Chạy xong một tài khoản thì đợi 3 phút rồi đọc lại điểm, vì Rewards thường cộng điểm trễ vài phút." },
     ["log_keep_days", "Giữ file nhật ký", "ngày", "File cũ hơn trong data/logs tự xóa khi bot chạy.", 1, 90],
   ]],
 ];

@@ -71,6 +71,13 @@ const I18N = (() => {
       "Close the app window before that time: while the app is open, the automatic run is skipped.",
     "Chọn giờ chạy dạng HH:MM": "Pick a run time as HH:MM", "Đã hẹn chạy mỗi ngày lúc #:#": "Scheduled to run every day at #:#",
     "Đã tắt chạy tự động": "Automatic runs turned off",
+    // ---- tự làm mới điểm (Cài đặt → Dữ liệu)
+    "Tự làm mới điểm khi mở app": "Refresh points when the app opens",
+    "Mở app là tự đọc lại điểm của các tài khoản chưa được đọc trong hôm nay. Chạy ẩn, không mở cửa sổ.":
+      "Opening the app re-reads points for accounts not read yet today. Runs hidden, no window.",
+    "Tự làm mới sau khi chạy xong": "Refresh after a run finishes",
+    "Chạy xong một tài khoản thì đợi 3 phút rồi đọc lại điểm, vì Rewards thường cộng điểm trễ vài phút.":
+      "When an account finishes, wait 3 minutes and re-read its points, since Rewards often credits a few minutes late.",
     "Thao tác": "Actions", "Thao tác nhanh": "Quick actions", "Hay dùng": "Frequently used", "Gợi ý": "Suggested",
     "Chạy tất cả tài khoản": "Run all accounts", "Làm mới điểm": "Refresh points",
     "Tổng điểm hiện có": "Total balance", "Điểm hôm nay": "Points today", "cộng mọi tài khoản": "across all accounts",

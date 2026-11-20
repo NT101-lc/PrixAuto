@@ -43,6 +43,7 @@ SETTING_SCHEMA = {
     "theme": (str, ("system", "light", "dark", "cyberpunk")),
     "language": (str, ("vi", "en")),
     "onboarded": (bool,), "check_updates": (bool,),
+    "auto_refresh_open": (bool,), "auto_refresh_after_run": (bool,),
     "notify_mode": (str, notify.MODES),
     "telegram_chat_id": (str, re.compile(r"(-?\d{1,20}|@[A-Za-z0-9_]{5,32})?")),
     "risk_ack": (str, re.compile(r"(\d{1,4}\.\d{1,4}\.\d{1,4})?")),  # số phiên bản lúc đồng ý, hoặc rỗng
