@@ -6,6 +6,16 @@ rỗng) thì test và workflow phát hành đều báo lỗi, không có bản p
 
 Viết cho người dùng: bản mới làm được gì, sửa lỗi gì, người dùng cần làm gì. Không cần liệt kê tên file hay chi tiết code.
 
+## 1.8.3 - 2026-11-20
+- Mới: **báo kết quả qua Telegram hoặc Discord** sau mỗi lượt chạy. Mỗi tài khoản có một đoạn: số điểm hiện có, điểm
+  được hôm nay, tiến độ Search PC / Mobile, Daily Set, Keep earning, Quests, các việc còn thiếu và chuỗi streak.
+  Cài trong **Cài đặt > Thông báo**: chọn gửi mỗi lượt chạy hoặc chỉ khi có lỗi, dán token bot Telegram kèm Chat ID
+  hoặc webhook Discord, rồi bấm **Gửi thử**. Token và webhook được mã hóa trên máy, không ghi ra nhật ký.
+- Visual Search không còn báo **Lỗi** khi Bing từ chối ảnh nhưng Rewards vẫn tính lượt đó; chỉ báo lỗi khi đã thử hết
+  mà vẫn chưa được ghi nhận.
+- Nút **Lưu cài đặt** ở đầu trang giờ lưu luôn phần Thông báo.
+- Đổi ngôn ngữ hoặc bật/tắt chế độ vui trong Cài đặt không còn làm mất những gì đang nhập dở.
+
 ## 1.8.2 - 2026-11-13
 - Sửa lỗi tài khoản mới luôn chạy profile Edge **Default** dù trong cửa sổ **Đăng nhập** bạn đã chuyển sang profile khác
   (vd Profile 2). Giờ đóng cửa sổ đăng nhập xong, bot ghim đúng profile bạn dùng sau cùng và ghi rõ trong nhật ký.

@@ -1,4 +1,4 @@
 """PrixAuto: tự làm các việc Microsoft Rewards hằng ngày cho nhiều tài khoản."""
 
 APP_NAME = "PrixAuto"
-__version__ = "1.8.2"
+__version__ = "1.8.3"
