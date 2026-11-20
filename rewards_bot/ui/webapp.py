@@ -18,7 +18,7 @@ from pathlib import Path
 import webview
 
 from .. import APP_NAME, __version__
-from ..core import credentials, notify, security, updater
+from ..core import credentials, notify, scheduler, security, updater
 from ..core import config
 from ..core.config import (DATA_DIR, DASHBOARD_FILE, HISTORY_FILE, POINTS_HISTORY_FILE, load_settings, new_profile_dir,
                            read_json, save_settings, write_json)
@@ -346,6 +346,26 @@ class Api:
         if isinstance(name, str):
             credentials.remove(name)
         return {"ok": True, "credentials": self._cred_info()}
+
+    # ------------------------------------------------------------ chạy tự động mỗi ngày (Task Scheduler của Windows)
+    def get_schedule(self) -> dict:
+        try:
+            return {"ok": True, "schedule": scheduler.status()}
+        except scheduler.ScheduleError as e:
+            return {"ok": False, "error": str(e)}
+
+    def set_schedule(self, data) -> dict:
+        """data: {"enabled": bool, "time": "HH:MM", "wake": bool}. Bật = tạo / ghi đè task; tắt = xóa task."""
+        if not isinstance(data, dict) or not isinstance(data.get("enabled"), bool):
+            return {"ok": False, "error": "Dữ liệu không hợp lệ."}
+        try:
+            if data["enabled"]:
+                sched = scheduler.enable(scheduler.clean_time(data.get("time")), data.get("wake") is True)
+            else:
+                sched = scheduler.disable()
+        except (ValueError, scheduler.ScheduleError) as e:
+            return {"ok": False, "error": str(e)}
+        return {"ok": True, "schedule": sched}
 
     # ------------------------------------------------------------ thông báo Telegram / Discord
     @staticmethod

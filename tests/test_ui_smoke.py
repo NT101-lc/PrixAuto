@@ -93,6 +93,9 @@ window.pywebview = { api: new Proxy({}, { get: (_, k) => async (...a) => {
   if (k === 'delete_profiles') { window.__B.profiles = window.__B.profiles.filter((p) => !a[0].includes(p.name));
     return {ok: true, profiles: window.__B.profiles}; }
   if (k === 'start') return window.__failStart ? {ok: false, error: 'x'} : {ok: true, running: []};
+  if (k === 'get_schedule') return {ok: true, schedule: window.__schedule || {supported: true, enabled: false}};
+  if (k === 'set_schedule') { window.__schedule = a[0].enabled ? {supported: true, enabled: true, time: a[0].time, wake: a[0].wake,
+    task_enabled: true, matches: true} : {supported: true, enabled: false}; return {ok: true, schedule: window.__schedule}; }
   if (k === 'check_update') return window.__update || {ok: true, newer: false, current: window.__B.app.version};
   return {ok: true, running: [], settings: window.__B.settings, profiles: window.__B.profiles}; } }) };
 window.addEventListener('load', () => window.dispatchEvent(new Event('pywebviewready')));"""
@@ -937,6 +940,33 @@ def test_docker_shell_search_kpis_and_settings_nav(server):
         pg.wait_for_timeout(800)  # cuộn mượt
         top = pg.evaluate("document.querySelector('#about-card').getBoundingClientRect().top")
         assert 0 <= top < 200, top
+        assert errors == []
+
+
+def test_schedule_card_turns_daily_run_on_and_off(server):
+    """Cài đặt → Chạy tự động mỗi ngày: đọc lịch từ Windows, bật kèm giờ + đánh thức máy, báo trạng thái, tắt lại; EN dịch đủ."""
+    with app_page(server, boot_n(1)) as (pg, errors):
+        pg.evaluate("go('settings')")
+        assert poll(pg, "document.querySelector('#sc-status').textContent.includes('Đang tắt')")
+        assert pg.locator("#sc-options").is_hidden()
+        pg.check("#sc-enabled")
+        assert pg.locator("#sc-options").is_visible() and "đóng cửa sổ app" in pg.inner_text("#sc-hint")
+        pg.fill("#sc-time", "07:45")
+        pg.click("#sc-save")
+        assert poll(pg, "document.querySelector('#sc-status').textContent.includes('07:45')")
+        call = pg.evaluate("window.__calls.filter((c) => c[0] === 'set_schedule').pop()[1]")
+        assert call == {"enabled": True, "time": "07:45", "wake": True}
+        assert "đánh thức máy" in pg.inner_text("#sc-status")
+        # mục con bên trái có thẻ mới; tìm chung tìm ra nó
+        assert pg.locator("#settings-nav .settings-nav-item", has_text="Chạy tự động mỗi ngày").count() == 1
+        assert any(i["title"] == "Chạy tự động mỗi ngày" for i in pg.evaluate("Search.find('chay tu dong').map((i) => ({title: i.title}))"))
+        pg.uncheck("#sc-enabled"); pg.click("#sc-save")
+        assert poll(pg, "document.querySelector('#sc-status').textContent.includes('Đang tắt')")
+        assert pg.evaluate("window.__calls.filter((c) => c[0] === 'set_schedule').pop()[1].enabled") is False
+        pg.click(".lang-switch button[data-set-lang=en]")
+        pg.check("#sc-enabled")
+        txt = pg.inner_text("#schedule-card")
+        assert "Run automatically every day" in txt and "Close the app window" in txt, txt
         assert errors == []
 
 

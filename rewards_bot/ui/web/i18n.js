@@ -52,6 +52,25 @@ const I18N = (() => {
     "Tìm tài khoản, cài đặt, hướng dẫn, nhật ký…": "Search accounts, settings, help, logs…", "Tìm trong app": "Search the app",
     "Kết quả tìm kiếm": "Search results", "Không tìm thấy kết quả": "No results", "Trang": "Pages",
     "Hướng dẫn & FAQ": "Help & FAQ", "# dòng khớp": "# matching lines",
+    // ---- chạy tự động mỗi ngày (Cài đặt)
+    "Chạy tự động mỗi ngày": "Run automatically every day", "Bật chạy tự động": "Turn on automatic runs",
+    "Windows tự mở bot mỗi ngày và chạy ẩn mọi tài khoản. Máy tắt đúng giờ đó thì bật lên sẽ chạy bù.":
+      "Windows starts the bot every day and runs every account hidden. If the PC is off at that time, it catches up when you turn it on.",
+    "Giờ chạy": "Run time", "Đánh thức máy nếu đang ngủ (Sleep)": "Wake the PC if it is asleep (Sleep)",
+    "Lưu lịch chạy": "Save schedule", "Chỉ có trên Windows. Trên Linux dùng cron:": "Windows only. On Linux use cron:",
+    "Đang tắt: bot chỉ chạy khi bạn bấm Chạy.": "Off: the bot only runs when you click Run.",
+    "Đang bật: chạy mỗi ngày lúc #:#.": "On: runs every day at #:#.",
+    "Đang bật: chạy mỗi ngày lúc #:#, đánh thức máy nếu cần.": "On: runs every day at #:#, waking the PC if needed.",
+    "Lịch đang bị tắt trong Task Scheduler của Windows. Bấm Lưu lịch chạy để bật lại.":
+      "The schedule is disabled in Windows Task Scheduler. Click Save schedule to turn it back on.",
+    "Lịch đang trỏ tới bản app ở thư mục khác (có thể bạn đã chuyển thư mục). Bấm Lưu lịch chạy để sửa.":
+      "The schedule points to a copy of the app in another folder (maybe you moved it). Click Save schedule to fix it.",
+    "Bot bắt đầu trong vòng # phút sau giờ đặt (chờ ngẫu nhiên, chỉnh ở mục Hành vi giống người dùng). Nhớ đóng cửa sổ app trước giờ chạy: app đang mở thì lượt chạy tự động bị bỏ qua.":
+      "The bot starts within # minutes after the set time (random wait, change it under User-like behaviour). Close the app window before that time: while the app is open, the automatic run is skipped.",
+    "Nhớ đóng cửa sổ app trước giờ chạy: app đang mở thì lượt chạy tự động bị bỏ qua.":
+      "Close the app window before that time: while the app is open, the automatic run is skipped.",
+    "Chọn giờ chạy dạng HH:MM": "Pick a run time as HH:MM", "Đã hẹn chạy mỗi ngày lúc #:#": "Scheduled to run every day at #:#",
+    "Đã tắt chạy tự động": "Automatic runs turned off",
     "Thao tác": "Actions", "Thao tác nhanh": "Quick actions", "Hay dùng": "Frequently used", "Gợi ý": "Suggested",
     "Chạy tất cả tài khoản": "Run all accounts", "Làm mới điểm": "Refresh points",
     "Tổng điểm hiện có": "Total balance", "Điểm hôm nay": "Points today", "cộng mọi tài khoản": "across all accounts",

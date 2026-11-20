@@ -458,6 +458,7 @@ function bindStatic() {
   $("#btn-save-settings").onclick = saveSettingsForm;
   bindSettingsDialog();
   Notify.bind();
+  Schedule.bind();
   $("#max-parallel").onchange = (e) => saveSettings({ max_parallel: Math.max(1, +e.target.value || 1) });
   bindProfileDialog();
   bindGoalDialog();
@@ -1608,6 +1609,7 @@ function renderSettings(keep = false) {
   $("#set-fun-mode").checked = isFun();
   $("#set-check-updates").checked = S.settings.check_updates !== false;
   Notify.render();
+  Schedule.render();
   $$("#lang-choice input").forEach((i) => (i.checked = i.value === (S.settings.language === "en" ? "en" : "vi")));
   const app = S.app || {};
   $("#app-version").textContent = `Phiên bản ${app.version || "?"}${app.frozen ? "" : " (mã nguồn)"}`;
@@ -1655,6 +1657,58 @@ async function saveSettingsForm() {
 }
 // Thông báo Telegram / Discord. Giao diện chỉ biết kênh nào đã lưu (S.notify), không bao giờ nhận lại token / webhook;
 // ô token để trống khi lưu = giữ nguyên token cũ.
+// ===================================================================== chạy tự động mỗi ngày
+// Lịch nằm trong Task Scheduler của Windows (nguồn sự thật); app chỉ đọc lại bằng get_schedule và tạo / xóa bằng set_schedule.
+const Schedule = {
+  data: null,  // {supported, enabled, time, wake, task_enabled, matches}; null = chưa đọc
+  async load() {
+    const r = await api().get_schedule();
+    this.data = r.ok && r.schedule ? r.schedule : { supported: true, enabled: false, error: r.error || "" };
+    this.render();
+  },
+  render() {
+    if (!this.data) { this.load(); return; }  // lần đầu mở Cài đặt: hỏi Windows
+    const d = this.data, on = !!d.enabled;
+    $("#sc-unsupported").hidden = d.supported !== false;
+    for (const id of ["#sc-enabled", "#sc-time", "#sc-wake", "#sc-save"]) $(id).disabled = d.supported === false;
+    $("#sc-enabled").checked = on;
+    if (d.time) $("#sc-time").value = d.time;
+    if (on) $("#sc-wake").checked = !!d.wake;
+    this.sync();
+    const st = $("#sc-status");
+    st.className = "small min-w-0";
+    if (d.error) { st.textContent = d.error; st.classList.add("text-danger"); }
+    else if (!on) st.textContent = d.supported === false ? "" : "Đang tắt: bot chỉ chạy khi bạn bấm Chạy.";
+    else if (d.task_enabled === false) { st.textContent = "Lịch đang bị tắt trong Task Scheduler của Windows. Bấm Lưu lịch chạy để bật lại."; st.classList.add("text-warning"); }
+    else if (!d.matches) { st.textContent = "Lịch đang trỏ tới bản app ở thư mục khác (có thể bạn đã chuyển thư mục). Bấm Lưu lịch chạy để sửa."; st.classList.add("text-warning"); }
+    else { st.textContent = `Đang bật: chạy mỗi ngày lúc ${d.time}${d.wake ? ", đánh thức máy nếu cần" : ""}.`; st.classList.add("text-success"); }
+  },
+  // ẩn / hiện tùy chọn theo công tắc; nhắc chờ ngẫu nhiên và việc phải đóng app
+  sync() {
+    const on = $("#sc-enabled").checked;
+    $("#sc-options").hidden = !on;
+    const j = S.settings.start_jitter_max ?? 30;
+    $("#sc-hint").hidden = !on;
+    $("#sc-hint").textContent = (j ? `Bot bắt đầu trong vòng ${j} phút sau giờ đặt (chờ ngẫu nhiên, chỉnh ở mục Hành vi giống người dùng). ` : "")
+      + "Nhớ đóng cửa sổ app trước giờ chạy: app đang mở thì lượt chạy tự động bị bỏ qua.";
+  },
+  async save() {
+    const on = $("#sc-enabled").checked, time = $("#sc-time").value;
+    if (on && !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) { showError("Chọn giờ chạy dạng HH:MM"); $("#sc-time").focus(); return; }
+    $("#sc-save").disabled = true;
+    try {
+      const r = await api().set_schedule({ enabled: on, time, wake: $("#sc-wake").checked });
+      if (!r.ok) { showError(r.error); return; }
+      this.data = r.schedule; this.render();
+      toast(on ? `Đã hẹn chạy mỗi ngày lúc ${time}` : "Đã tắt chạy tự động");
+    } finally { $("#sc-save").disabled = this.data?.supported === false; }
+  },
+  bind() {
+    $("#sc-enabled").onchange = () => this.sync();
+    $("#sc-save").onclick = () => this.save();
+  },
+};
+
 const Notify = {
   render() {
     const n = S.notify || {};
