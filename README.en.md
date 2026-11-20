@@ -56,6 +56,10 @@
 
 <img src="docs/images/suggest.png" alt="Suggestions when the search box is empty" width="900">
 
+**⏰ Daily schedule inside the app**: pick a time, done. No more digging in Task Scheduler.
+
+**🔄 No more pressing Refresh**: points update when the app opens, and again 3 minutes after a run.
+
 **Tidier pages**: Accounts has 4 summary tiles (total points, today, running, needs attention). Settings has a section menu on the left.
 
 ## 📸 Screenshots
@@ -92,7 +96,8 @@ You need: Windows 10/11 64-bit, Edge (already installed), a [Microsoft Rewards](
 5. **Run**: click **⋮ → Check** to be sure, then **Run all**. About 20–40 minutes per account.
 
 > [!TIP]
-> Run it every day by itself: Task Scheduler → Create Basic Task → Daily → start `C:\PrixAuto\PrixAuto.exe` with arguments `--run-all --headless`.
+> Run it every day by itself: **Settings → Run automatically every day** → pick a time → **Save schedule**. Close the app
+> before that time. Made a Task Scheduler task by hand the old way? Delete it so it doesn't run twice.
 
 **Updates**: the app tells you when a new version is out. Click **Update now**, done. Accounts and settings stay.
 

@@ -56,6 +56,10 @@
 
 <img src="docs/images/suggest-vi.png" alt="Gợi ý khi ô tìm còn trống" width="900">
 
+**⏰ Hẹn giờ chạy mỗi ngày ngay trong app**: chọn giờ là xong, khỏi mò Task Scheduler.
+
+**🔄 Hết phải bấm Làm mới**: mở app là điểm tự cập nhật, chạy xong 3 phút cũng tự cập nhật.
+
 **Gọn hơn**: trang Tài khoản có 4 ô tóm tắt (tổng điểm, hôm nay, đang chạy, acc lỗi). Trang Cài đặt có menu mục bên trái.
 
 ## 📸 Ảnh
@@ -92,7 +96,8 @@ Cần: Windows 10/11 64-bit, Edge (có sẵn), một acc [Microsoft Rewards](htt
 5. **Chạy**: bấm **⋮ → Kiểm tra** cho chắc, rồi **Chạy tất cả**. Mỗi acc mất khoảng 20–40 phút.
 
 > [!TIP]
-> Muốn tự chạy mỗi ngày: Task Scheduler → Create Basic Task → Daily → chạy `C:\PrixAuto\PrixAuto.exe` với tham số `--run-all --headless`.
+> Muốn tự chạy mỗi ngày: **Cài đặt → Chạy tự động mỗi ngày** → chọn giờ → **Lưu lịch chạy**. Nhớ đóng app trước giờ đó.
+> Đã tự tạo lịch bằng Task Scheduler theo cách cũ thì xóa lịch cũ đi cho khỏi chạy 2 lần.
 
 **Cập nhật**: có bản mới thì app tự báo, bấm **Cập nhật ngay** là xong. Tài khoản và cài đặt giữ nguyên.
 
